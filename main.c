@@ -522,6 +522,12 @@ static void power_manage(void)
  */
 int main(void)
 {
+		//test wr
+		ble_gatts_value_t value;
+		uint8_t s[32] = "abcdefghijklmnopqrstuvwxyz";
+		value.len = 12;
+		value.p_value = s;
+	
     uint32_t err_code;
     bool erase_bonds;
 
@@ -539,10 +545,13 @@ int main(void)
 		SEGGER_RTT_printf(0,"***************\nSTART\n***************\n");
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
-    ble_nus_string_send(&m_nus, (unsigned char *)"plok", 4);
+		sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.value_handle, &value);
     // Enter main loop.
     for (;;)
     {
+				
+				sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.value_handle, &value);
+				SEGGER_RTT_printf(0,"rx value : %s", s);
         power_manage();
     }
 }
