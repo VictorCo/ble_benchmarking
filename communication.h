@@ -1,16 +1,28 @@
 #include <stdint.h>
 #include "ble_nus.h"
 
-#define MESSAGE_TYPE_SOF 's'
-#define MESSAGE_TYPE_EOF 'e'
-#define MESSAGE_TYPE_CMD 'c'
-#define MESSAGE_TYPE_PARAM 'p'
+#define MESSAGE_TYPE_SOF 			's'
+#define MESSAGE_TYPE_EOF 			'e'
+#define MESSAGE_TYPE_CMD 			'c'
+#define MESSAGE_TYPE_PARAM 		'p'
 
-#define MESSAGE_ERROR -1
-#define MESSAGE_ERROR_PARAM -2
+#define MESSAGE_ERROR 						-1
+#define MESSAGE_ERROR_PARAM 			-2
+#define MESSAGE_ERROR_LEN_PARAM 	-3
+#define MESSAGE_ERROR_OPEN_PARAM 	-4
 #define MESSAGE_SUCCES 1
 
-#define MAX_PARAM 8
+#define MAX_WORD  0x80			//le maximum d'action speciale disponible
+
+#define TYPE_PARAM 0x1
+#define TYPE_CMD   0x2
+#define TYPE_OTHER 0x10
+#define MASK_WORD  0xF		/*les 4 premiers bits sont utilisés pour reconnaitre un debut ou fin d'une action spéciale
+														bit 1 : parametre
+														bit 2 : commande
+														bit 3 : à définir
+														bit 4 : à définir
+													*/
 
 typedef enum
 {
@@ -21,20 +33,19 @@ typedef struct
 {
 	int length;
 	char *start;
-	char *type;
-}param_t;
+	int type;
+}c_word_t;
 
 typedef struct
 {
 	uint8_t length;
 	char *start;
 	char *end;
-	int nParam;
-	param_t param[MAX_PARAM];
-	char *cmd;
-}msg_t;
+	int nWord;
+	c_word_t word[MAX_WORD];
+}c_msg_t;
 
 
 void communication_start(char *s, int length, ble_nus_t *p_nus);
-int static parse(msg_t *p_msg);
-void display_param(msg_t *p_msg);
+int static parse(c_msg_t *p_msg);
+void display_param(c_msg_t *p_msg);

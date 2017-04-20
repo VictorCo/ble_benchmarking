@@ -545,13 +545,11 @@ int main(void)
 		SEGGER_RTT_printf(0,"***************\nSTART\n***************\n");
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
-		sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.value_handle, &value);
+		sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
     // Enter main loop.
     for (;;)
     {
-				
-				sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.value_handle, &value);
-				SEGGER_RTT_printf(0,"rx value : %s", s);
+				err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
         power_manage();
     }
 }
