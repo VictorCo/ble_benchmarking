@@ -34,7 +34,7 @@ int static parse(c_msg_t *p_msg)
 	if (*p_msg->start != MESSAGE_TYPE_SOF
 	|| 	*p_msg->end != MESSAGE_TYPE_EOF)
 	{
-		return MESSAGE_ERROR;
+		return MESSAGE_ERROR_INIT;
 	}
 	
 	
@@ -65,7 +65,7 @@ int static parse(c_msg_t *p_msg)
 			if (!word_current)	//ouverture
 			{
 				if (++p_msg->nWord >= MAX_WORD)
-					return MESSAGE_ERROR_PARAM;
+					return MESSAGE_ERROR_NUMBER_WORD;
 				
 				word_current = &p_msg->word[p_msg->nWord-1];
 				word_current->type = type;
@@ -77,7 +77,7 @@ int static parse(c_msg_t *p_msg)
 				word_current->length = i - word_current->start;
 				
 				if (word_current->length < 0)
-					return MESSAGE_ERROR_LEN_PARAM;
+					return MESSAGE_ERROR_LEN_WORD;
 				
 				
 				word_current = NULL;
@@ -88,7 +88,7 @@ int static parse(c_msg_t *p_msg)
 	}
 	
 	if (word_current)			//si un parametre n'a pas été fermé, erreur
-		return MESSAGE_ERROR_OPEN_PARAM;
+		return MESSAGE_ERROR_OPEN_WORD;
 		
 	display_param(p_msg);
 	

@@ -6,10 +6,10 @@
 #define MESSAGE_TYPE_CMD 			'c'
 #define MESSAGE_TYPE_PARAM 		'p'
 
-#define MESSAGE_ERROR 						-1
-#define MESSAGE_ERROR_PARAM 			-2
-#define MESSAGE_ERROR_LEN_PARAM 	-3
-#define MESSAGE_ERROR_OPEN_PARAM 	-4
+#define MESSAGE_ERROR_INIT 					-1
+#define MESSAGE_ERROR_NUMBER_WORD		-2
+#define MESSAGE_ERROR_LEN_WORD 			-3
+#define MESSAGE_ERROR_OPEN_WORD 		-4
 #define MESSAGE_SUCCES 1
 
 #define MAX_WORD  0x80			//le maximum d'action speciale disponible
