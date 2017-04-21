@@ -19,7 +19,7 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
 	msg.end = mot + length-1;
 	
 	err_code = parse(&msg);
-	ble_nus_string_send(p_nus, (uint8_t *)"envoie donne", 12);
+	ble_nus_string_send(p_nus, (uint8_t *)"envoie donne abcdefghiklmnop", 28);
 	if (err_code == MESSAGE_SUCCES)
 			SEGGER_RTT_printf(0, "Envoie conforme au protocole", err_code);
 	

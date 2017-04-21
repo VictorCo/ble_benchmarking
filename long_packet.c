@@ -10,7 +10,10 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
 	uint32_t err_code;
 	char data[SIZE_QUEUED];
 	uint16_t i;
-	uint16_t len;
+	uint16_t len = 0;
+	
+	uint16_t value_offset;
+	uint16_t value_len;
 	
 	m_user_block.p_mem = m_queued;
 	m_user_block.len = SIZE_QUEUED;
@@ -27,14 +30,14 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
 			case BLE_EVT_USER_MEM_RELEASE :
 				SEGGER_RTT_printf(0, "Release\n");
 			  memset(data, 0, SIZE_QUEUED);
-				for (i = 0; m_queued[i] == START_PACKET; i += SIZE_PACKET)
+				for (i = 0; m_queued[i] != 0; i += SIZE_HEADER + value_len)
 				{
-					memcpy(data + (SIZE_DATA)*(i/SIZE_PACKET), &m_queued[i + SIZE_HEADER], SIZE_DATA);
+					value_offset = m_queued[i + MEM_OFFSET];
+					value_len = m_queued[i + MEM_LEN];
+					memcpy(data + value_offset, &m_queued[i + SIZE_HEADER], value_len);
+					len += value_len;
 				}
-				
-				for (; data[i] == '\0'; --i) {}
 					
-				len = i;
 				p_ble_nus->data_handler(p_ble_nus, (uint8_t*)data, len);
 			break;
 			
