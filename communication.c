@@ -37,12 +37,8 @@ int static parse(c_msg_t *p_msg)
 		return MESSAGE_ERROR_INIT;
 	}
 	
-	
-	SEGGER_RTT_printf(0, "start addr = %d\n", p_msg->start);
-	SEGGER_RTT_printf(0, "fin addr = %d\n", p_msg->end);
 	for (char * i = p_msg->start+1; i != p_msg->end; i++)
 	{
-		//SEGGER_RTT_printf(0, "valeur = %c // addr = %d\n", *i, i);
 		switch (*i)
 		{
 			case MESSAGE_TYPE_PARAM :
@@ -76,7 +72,7 @@ int static parse(c_msg_t *p_msg)
 			{
 				word_current->length = i - word_current->start;
 				
-				if (word_current->length < 0)
+				if (word_current->length <= 0)
 					return MESSAGE_ERROR_LEN_WORD;
 				
 				
@@ -99,7 +95,7 @@ void display_param(c_msg_t *p_msg)
 {
 	c_word_t *p = &p_msg->word[0];
 	for (int i = 0; i < p_msg->nWord; i++, p = &p_msg->word[i])
-		SEGGER_RTT_printf(0, "***\nWord n : %d\nAddr param : %d\nlen : %d\nAddr : %d\n", i, p,&p->length, p->start);
+	SEGGER_RTT_printf(0, "***\nWord n : %d\nAddr param : %d\ntype : %x, len : %d\nAddr start: %d\n", i, p,p->type, p->length, p->start);
 }
 	
 
