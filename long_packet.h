@@ -1,12 +1,11 @@
 #include "ble.h"
 #include "ble_nus.h"
 
-#define SIZE_QUEUED 512
-#define SIZE_HEADER 6
-#define START_PACKET 0xE
+#define SIZE_QUEUED 			128
+#define SIZE_HEADER 				6
 
-#define MEM_OFFSET 0x2
-#define MEM_LEN		 0x4
+#define MEM_OFFSET 				0x2
+#define MEM_LEN		 				0x4
 
 typedef struct
 {

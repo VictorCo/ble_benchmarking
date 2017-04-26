@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <time.h>
 #include "nordic_common.h"
 #include "nrf.h"
 #include "ble_hci.h"
@@ -40,6 +41,7 @@
 #include "SEGGER_RTT.h"
 #include "communication.h"
 #include "long_packet.h"
+#include "timer_packet.h"
 
 #define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                           /**< Include the service_changed characteristic. If not enabled, the server's database cannot be changed for the lifetime of the device. */
 
@@ -51,9 +53,6 @@
 
 #define APP_ADV_INTERVAL                64                                          /**< The advertising interval (in units of 0.625 ms. This value corresponds to 40 ms). */
 #define APP_ADV_TIMEOUT_IN_SECONDS      180                                         /**< The advertising timeout (in units of seconds). */
-
-#define APP_TIMER_PRESCALER             0                                           /**< Value of the RTC1 PRESCALER register. */
-#define APP_TIMER_OP_QUEUE_SIZE         4                                           /**< Size of timer operation queues. */
 
 #define MIN_CONN_INTERVAL               MSEC_TO_UNITS(20, UNIT_1_25_MS)             /**< Minimum acceptable connection interval (20 ms), Connection interval uses 1.25 ms units. */
 #define MAX_CONN_INTERVAL               MSEC_TO_UNITS(75, UNIT_1_25_MS)             /**< Maximum acceptable connection interval (75 ms), Connection interval uses 1.25 ms units. */
@@ -67,6 +66,7 @@
 
 #define UART_TX_BUF_SIZE                256                                         /**< UART TX buffer size. */
 #define UART_RX_BUF_SIZE                256                                         /**< UART RX buffer size. */
+
 
 static ble_nus_t                        m_nus;                                      /**< Structure to identify the Nordic UART Service. */
 static uint16_t                         m_conn_handle = BLE_CONN_HANDLE_INVALID;    /**< Handle of the current connection. */
@@ -522,6 +522,12 @@ static void power_manage(void)
  */
 int main(void)
 {
+//		test time
+//		APP_TIMER_DEF(start);
+//		app_timer_create(&start,
+//                      APP_TIMER_MODE_REPEATED,
+//                      timer_a_handler);
+	
 		//test wr
 		ble_gatts_value_t value;
 		uint8_t s[32] = "abcdefghijklmnopqrstuvwxyz";
@@ -533,6 +539,7 @@ int main(void)
 
     // Initialize.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
+		timer_init();
     uart_init();
     
     buttons_leds_init(&erase_bonds);
@@ -549,6 +556,7 @@ int main(void)
     // Enter main loop.
     for (;;)
     {
+				SEGGER_RTT_printf(0, "Diff timer : %d\n", timer_update());
 				err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
         power_manage();
     }

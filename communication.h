@@ -47,5 +47,5 @@ typedef struct
 
 
 void communication_start(char *s, int length, ble_nus_t *p_nus);
-int static parse(c_msg_t *p_msg);
 void display_param(c_msg_t *p_msg);
+int parse(c_msg_t *p_msg);
