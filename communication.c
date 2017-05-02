@@ -2,6 +2,8 @@
 #include "communication.h"
 #include "SEGGER_RTT.h"
 #include "timer_packet.h"
+#include "ble_nus.h"
+#include "long_packet.h"
 
 
 void communication_start(char *s, int length, ble_nus_t *p_nus)
@@ -22,11 +24,12 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
 	msg.end = mot + length-1;
 	
 	err_code = parse(&msg);
-	ble_nus_string_send(p_nus, (uint8_t *)"envoie donne abcdefghiklmnop", 28);
+    
 	if(err_code == MESSAGE_SUCCES)
 	{
+        send_long_packet(p_nus, s, length);
+        //ble_nus_string_send(p_nus, (uint8_t*)"12345678912345678912", 20);
 		timer_restart();
-		SEGGER_RTT_printf(0, "Envoie conforme au protocole\n", err_code);
 	}
 }
 
@@ -101,8 +104,8 @@ void display_param(c_msg_t *p_msg)
 	for(int i = 0; i < p_msg->nWord; i++, p = &p_msg->word[i])
 	{
 		SEGGER_RTT_printf(0,
-            "***\nWord n : %d\nAddr param : %d\ntype : %x, len : %d\nAddr start: %d\n",
-			i, p,p->type, p->length, p->start);
+                          "***\nWord n : %d\nAddr param : %d\ntype : %x, len : %d\nAddr start: %d\n",
+                          i, p,p->type, p->length, p->start);
 	}
 }
 	

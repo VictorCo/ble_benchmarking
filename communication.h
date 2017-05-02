@@ -4,9 +4,9 @@
 #define MESSAGE_TYPE_SOF 			's'
 #define MESSAGE_TYPE_EOF 			'e'
 #define MESSAGE_TYPE_CMD 			'c'
-#define MESSAGE_TYPE_PARAM 		'p'
+#define MESSAGE_TYPE_PARAM 		    'p'
 
-#define MESSAGE_ERROR_INIT 					-1
+#define MESSAGE_ERROR_INIT 				-1
 #define MESSAGE_ERROR_NUMBER_WORD		-2
 #define MESSAGE_ERROR_LEN_WORD 			-3
 #define MESSAGE_ERROR_OPEN_WORD 		-4
@@ -22,7 +22,7 @@
 														bit 2 : commande
 														bit 3 : à définir
 														bit 4 : à définir
-													*/
+							*/
 
 typedef enum
 {

@@ -2,7 +2,7 @@
 
 #define APP_TIMER_PRESCALER             0                                           /**< Value of the RTC1 PRESCALER register. */
 #define APP_TIMER_OP_QUEUE_SIZE         4                                           /**< Size of timer operation queues. */
-#define APP_TIMER_MAX_TIMERS						0
+#define APP_TIMER_MAX_TIMERS			0
 
 #define TIMER_INTERVAL APP_TIMER_TICKS(1000, APP_TIMER_PRESCALER)
 
