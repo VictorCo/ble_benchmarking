@@ -48,11 +48,11 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
 
 void send_long_packet(ble_nus_t *p_nus, char *s, int length)
 {
-	uint32_t pos = 0;
+    uint32_t pos = 0;
     uint32_t length_packet;
     uint32_t offset = length;
     uint32_t err_code;
-    
+
     for(; pos != length; offset = length - pos)
     {
         length_packet = ( offset > BLE_NUS_MAX_DATA_LEN ) ? BLE_NUS_MAX_DATA_LEN : offset;

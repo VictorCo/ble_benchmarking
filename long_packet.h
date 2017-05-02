@@ -1,16 +1,16 @@
 #include "ble.h"
 #include "ble_nus.h"
 
-#define SIZE_QUEUED 			128
-#define SIZE_HEADER 			6
+#define SIZE_QUEUED         128
+#define SIZE_HEADER           6
 
-#define MEM_OFFSET 				0x2
-#define MEM_LEN		 			0x4
+#define MEM_OFFSET          0x2
+#define MEM_LEN             0x4
 
 typedef struct
 {
-	uint16_t	len;
-	uint8_t 	*data;
+    uint16_t    len;
+    uint8_t     *data;
 }l_value_t;
 
 
