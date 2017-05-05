@@ -42,6 +42,7 @@
 #include "communication.h"
 #include "long_packet.h"
 #include "timer_packet.h"
+#include "security_mode.h"
 
 #define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                           /**< Include the service_changed characteristic. If not enabled, the server's database cannot be changed for the lifetime of the device. */
 
@@ -317,6 +318,7 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
     ble_advertising_on_ble_evt(p_ble_evt);
     bsp_btn_ble_on_ble_evt(p_ble_evt);
 	long_packet_on_ble_event(&m_nus, p_ble_evt);
+    security_mode_on_ble_event(&m_nus, p_ble_evt);
 }
 
 
@@ -527,21 +529,21 @@ int main(void)
 //	app_timer_create(&start,
 //                   APP_TIMER_MODE_REPEATED,
 //                   timer_a_handler);
-	
-	//test wr
-	ble_gatts_value_t value;
-	uint8_t s[32] = "abcdefghijklmnopqrstuvwxyz";
-	value.len = 12;
-	value.p_value = s;
-	
+
+    //test wr
+    ble_gatts_value_t value;
+    uint8_t s[32] = "abcdefghijklmnopqrstuvwxyz";
+    value.len = 12;
+    value.p_value = s;
+
     uint32_t err_code;
     bool erase_bonds;
 
     // Initialize.
     APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
-	timer_init();
+    timer_init();
     uart_init();
-    
+
     buttons_leds_init(&erase_bonds);
     ble_stack_init();
     gap_params_init();
@@ -549,15 +551,15 @@ int main(void)
     advertising_init();
     conn_params_init();
 
-	SEGGER_RTT_printf(0,"***************\nSTART\n***************\n");
+    SEGGER_RTT_printf(0,"***************\nSTART\n***************\n");
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
-	sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
+    sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
     // Enter main loop.
     for (;;)
     {
         //SEGGER_RTT_printf(0, "Diff timer : %d\n", timer_update());
-		err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
+        err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
         power_manage();
     }
 }

@@ -12,7 +12,7 @@
 #define MESSAGE_ERROR_OPEN_WORD         -4
 #define MESSAGE_SUCCES                   1
 
-#define MAX_WORD        0x80			//le maximum d'action speciale disponible
+#define MAX_WORD        0x80        //le maximum d'action speciale disponible
 
 #define TYPE_PARAM      0x1
 #define TYPE_CMD        0x2

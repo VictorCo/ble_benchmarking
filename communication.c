@@ -25,12 +25,14 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
 
     err_code = parse(&msg);
     
-	if(err_code == MESSAGE_SUCCES)
-	{
-        send_long_packet(p_nus, s, length);
-        //ble_nus_string_send(p_nus, (uint8_t*)"12345678912345678912", 20);
+    if(err_code == MESSAGE_SUCCES)
+    {
+        if (p_nus->is_notification_enabled)
+        {
+            send_long_packet(p_nus, s, length);
+        }
         timer_restart();
-	}
+    }
 }
 
 int parse(c_msg_t *p_msg)
