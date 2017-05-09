@@ -1,7 +1,7 @@
 #include "ble.h"
 #include "ble_nus.h"
 
-#define SIZE_QUEUED         128
+#define SIZE_QUEUED         1024
 #define SIZE_HEADER           6
 
 #define MEM_OFFSET          0x2

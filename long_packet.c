@@ -1,5 +1,6 @@
 #include <string.h>
 #include "long_packet.h"
+#include "ble.h"
 #include "ble_nus.h"
 #include "app_error.h"
 #include "SEGGER_RTT.h"
@@ -31,8 +32,8 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
             memset(data, 0, SIZE_QUEUED);
             for(i = 0; m_queued[i] != 0; i += SIZE_HEADER + value_len)
             {
-                value_offset = m_queued[i + MEM_OFFSET];
-                value_len = m_queued[i + MEM_LEN];
+                value_offset = *((uint16_t *)&m_queued[i + MEM_OFFSET]);
+                value_len = *((uint16_t *)&m_queued[i + MEM_LEN]);
                 memcpy(data + value_offset, &m_queued[i + SIZE_HEADER], value_len);
                 len += value_len;
             }
@@ -56,9 +57,11 @@ void send_long_packet(ble_nus_t *p_nus, char *s, int length)
     for(; pos != length; offset = length - pos)
     {
         length_packet = ( offset > BLE_NUS_MAX_DATA_LEN ) ? BLE_NUS_MAX_DATA_LEN : offset;
-        err_code = ble_nus_string_send(p_nus, (uint8_t*)&s[pos], length_packet);
-        APP_ERROR_CHECK(err_code);
-        SEGGER_RTT_printf(0, "send long packet erreur type : %d\n", err_code);
+        //do{
+        //err_code = ble_nus_string_send(p_nus, (uint8_t*)&s[pos], length_packet);
+        //}while(err_code == BLE_ERROR_NO_TX_BUFFERS);
+        //SEGGER_RTT_printf(0, "send long packet erreur type : %d\n", err_code);
+        //APP_ERROR_CHECK(err_code);
         pos += length_packet;
     }
 }

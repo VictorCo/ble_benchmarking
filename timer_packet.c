@@ -13,20 +13,28 @@ uint32_t timer_init(void)
                                 APP_TIMER_MODE_REPEATED, 
                                 timeout_handler);
 
-    timer_start();
-    app_timer_cnt_get(&m_timer_value);
+    //timer_start();
     APP_ERROR_CHECK(err_code);
-    return m_timer_value;
+    return err_code;
 }
 
 void timer_start(void)
 {
-    app_timer_start(m_timer_id, TIMER_INTERVAL, NULL);
+    uint32_t err_code;
+    err_code = app_timer_start(m_timer_id, TIMER_INTERVAL, NULL);
+    SEGGER_RTT_printf(0, "err code start timer : %d\n", err_code);
+}
+
+void timer_stop(void)
+{
+    uint32_t err_code;
+    err_code = app_timer_stop(m_timer_id);
+    SEGGER_RTT_printf(0, "err code stop timer : %d\n", err_code);
 }
 
 void timer_restart(void)
 {
-    app_timer_stop(m_timer_id);
+    timer_stop();
     timer_start();
 }
 
@@ -35,17 +43,15 @@ void timeout_handler(void * p_context)
     UNUSED_PARAMETER(p_context);
 }
 
-uint32_t timer_update(void)
+uint32_t timer_get_ticks(void)
 {
-    uint32_t timer_old = m_timer_value;
-    uint32_t ms = m_timer_value/(APP_TIMER_CLOCK_FREQ/1000);
     app_timer_cnt_get(&m_timer_value);
-    SEGGER_RTT_printf(0, 
-                      "timer : %d\nms : %d\n",
-                      ms/1000, ms);
-
-    return m_timer_value - timer_old;
+    return m_timer_value;
 }
 
+uint32_t timer_ticks_to_ms(uint32_t ticks)
+{
+    return ticks/(APP_TIMER_CLOCK_FREQ/1000);
+}
 
 

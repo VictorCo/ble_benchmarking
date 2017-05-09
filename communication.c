@@ -10,7 +10,7 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
 {
     c_msg_t msg;
     int err_code;
-    char mot[length+1];
+    char mot[SIZE_QUEUED+1];
     for(int i = 0; i < length; i++)
     {
         mot[i] = *(s+i);

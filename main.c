@@ -134,11 +134,11 @@ static void gap_params_init(void)
 /**@snippet [Handling the data received over BLE] */
 static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t length)
 {
-    for (uint32_t i = 0; i < length; i++)
-    {
-        while(app_uart_put(p_data[i]) != NRF_SUCCESS);
-    }
-    while(app_uart_put('\n') != NRF_SUCCESS);
+//    for (uint32_t i = 0; i < length; i++)
+//    {
+//        while(app_uart_put(p_data[i]) != NRF_SUCCESS);
+//    }
+//    while(app_uart_put('\n') != NRF_SUCCESS);
 		
 	communication_start((char *)p_data, length, p_nus);
 }
@@ -525,10 +525,13 @@ static void power_manage(void)
 int main(void)
 {
 //	test time
-//	APP_TIMER_DEF(start);
-//	app_timer_create(&start,
-//                   APP_TIMER_MODE_REPEATED,
-//                   timer_a_handler);
+    uint32_t v_timer;
+    
+    //test pointeur
+//    uint8_t tab8[] = {1,2,3,4};
+//    uint16_t *p16 = &tab8;
+//    uint16_t var16 = *(uint16_t*)tab8[0];
+//    SEGGER_RTT_printf(0, "pointeur 16 sur 8bits : %d\n", var16);
 
     //test wr
     ble_gatts_value_t value;
@@ -556,9 +559,17 @@ int main(void)
     APP_ERROR_CHECK(err_code);
     sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
     // Enter main loop.
+    timer_start();
     for (;;)
     {
-        //SEGGER_RTT_printf(0, "Diff timer : %d\n", timer_update());
+        v_timer = timer_ticks_to_ms(timer_get_ticks());
+        if (v_timer > 10000)
+        {
+            timer_restart();
+        }
+     
+        
+        SEGGER_RTT_printf(0, "Timer : %d\n", v_timer);
         err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
         power_manage();
     }

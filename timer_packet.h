@@ -9,9 +9,10 @@
 uint32_t timer_init(void);
 void timeout_handler(void * p_context);
 void timer_start(void);
+void timer_stop(void);
 void timer_restart(void);
-uint32_t timer_update(void);
-
+uint32_t timer_get_ticks(void);
+uint32_t timer_ticks_to_ms(uint32_t ticks);
 
 
 
