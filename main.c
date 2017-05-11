@@ -553,8 +553,10 @@ int main(void)
     services_init();
     advertising_init();
     conn_params_init();
-
-    SEGGER_RTT_printf(0,"***************\nSTART\n***************\n");
+    
+    err_code = NRF_LOG_INIT();
+    
+    NRF_LOG("***************\nSTART\n***************\n");
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
     sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
@@ -562,14 +564,13 @@ int main(void)
     timer_start();
     for (;;)
     {
-        v_timer = timer_ticks_to_ms(timer_get_ticks());
-        if (v_timer > 10000)
-        {
-            timer_restart();
-        }
-     
+//        v_timer = timer_ticks_to_ms(timer_get_ticks());
+//        if (v_timer > 10000)
+//        {
+//            timer_restart();
+//        }
+//        NRF_LOG_PRINTF("Timer %d\n", v_timer);
         
-        SEGGER_RTT_printf(0, "Timer : %d\n", v_timer);
         err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
         power_manage();
     }

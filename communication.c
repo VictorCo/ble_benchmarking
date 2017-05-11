@@ -1,5 +1,6 @@
 #include <string.h>
 #include "communication.h"
+#include "communication_error.h"
 #include "SEGGER_RTT.h"
 #include "timer_packet.h"
 #include "ble_nus.h"
@@ -15,7 +16,6 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
     {
         mot[i] = *(s+i);
     }
-
     mot[length] = '\0';
 
     memset(&msg, 0, sizeof(c_msg_t));
@@ -27,77 +27,113 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
     
     if(err_code == MESSAGE_SUCCES)
     {
-        if (p_nus->is_notification_enabled)
+        if(p_nus->is_notification_enabled)
         {
             send_long_packet(p_nus, s, length);
         }
         timer_restart();
     }
+    
+    else
+    {
+        communication_error_display(err_code);
+    }
 }
 
-int parse(c_msg_t *p_msg)
+uint8_t parse(c_msg_t *p_msg)
 {
     c_word_t *word_current = NULL;
-    uint8_t type;
+    uint8_t old_type = TYPE_NULL;
+    uint8_t skip;
 
-    if (*p_msg->start != MESSAGE_TYPE_SOF
-    || 	*p_msg->end != MESSAGE_TYPE_EOF)
+    if(*p_msg->start != MESSAGE_TYPE_SOF
+    || *p_msg->end != MESSAGE_TYPE_EOF)
     {
         return MESSAGE_ERROR_INIT;
     }
 	
     for(char * i = p_msg->start+1; i != p_msg->end; i++)
     {
-        switch(*i)
+        if( (skip = skip_separator(i)) )      //si on atteint un nouveau type de mot
         {
-            case MESSAGE_TYPE_PARAM :
-                type = TYPE_PARAM;
-                break;
-            
-            
-            case MESSAGE_TYPE_CMD :
-                type = TYPE_CMD;
-                break;
-                    
-            default :
-                type = TYPE_OTHER;
-                break;
-        }
-		
-        if(type & MASK_WORD) //action spe
-        {
-            if(!word_current)	//ouverture
-            {
-                if(++p_msg->nWord >= MAX_WORD)
-                {
-                    return MESSAGE_ERROR_NUMBER_WORD;
-                }
-                
-                word_current = &p_msg->word[p_msg->nWord-1];
-                word_current->type = type;
-                word_current->start = i+1;
-            }
-            
-            else if(word_current->type & type)  //fermeture
+            if(old_type != TYPE_NULL)      //on ferme l'ancien type si il existe
             {
                 word_current->length = i - word_current->start;
                 
-                if(word_current->length <= 0)
+                if (!word_current->length)
                 {
                     return MESSAGE_ERROR_LEN_WORD;
                 }
+                
                 word_current = NULL;
             }
+            i += skip;
+            if (i == p_msg->end)
+            {
+                break;
+            }
+                
+            if(++p_msg->nWord > MAX_WORD)
+            {
+                return MESSAGE_ERROR_NUMBER_WORD;
+            }
+              
+            word_current = &p_msg->word[p_msg->nWord-1];
+            word_current->type = get_type(i, old_type);
+            word_current->start = i;  
+            //si c'est un parametre on deplace le curseur de 1 pour le '-'
+            if (word_current->type == TYPE_PARAM)
+            {
+                word_current->start++; 
+            }
+            old_type = word_current->type;     
+        }
+        
+        if(!word_current)
+        {
+            return MESSAGE_ERROR_OPEN_WORD;
         }
     }
 	
     if(word_current)			//si un parametre n'a pas été fermé, erreur
     {
-        return MESSAGE_ERROR_OPEN_WORD;
+        return MESSAGE_ERROR_CLOSE_WORD;
+    }
+    
+    if(!p_msg->nWord)           
+    {
+        return MESSAGE_ERROR_NO_CMD;
     }
 		
     display_param(p_msg);
     return MESSAGE_SUCCES;
+}
+
+uint8_t skip_separator(char *s)
+{
+    uint8_t skip = 0;
+    while(*s == MESSAGE_SEPARATOR)
+    {
+        s++;
+        skip++;
+    }
+    
+    return skip;
+}
+
+uint8_t get_type(char *s, uint8_t old_type)
+{
+    if (old_type == TYPE_NULL)
+    {
+        return TYPE_CMD;
+    }
+    
+    if (*s == MESSAGE_TYPE_PARAM)
+    {
+        return TYPE_PARAM;
+    }
+            
+    return TYPE_ATTRIBUTE;
 }
 
 void display_param(c_msg_t *p_msg)

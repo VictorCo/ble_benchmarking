@@ -23,12 +23,12 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
     switch(p_ble_evt->header.evt_id)
     {
         case BLE_EVT_USER_MEM_REQUEST :
-            SEGGER_RTT_printf(0, "Request\n");
+            NRF_LOG("Request\n");
             sd_ble_user_mem_reply(p_ble_nus->conn_handle, &m_user_block);
             break;
             
         case BLE_EVT_USER_MEM_RELEASE :
-            SEGGER_RTT_printf(0, "Release\n");
+            NRF_LOG("Release\n");
             memset(data, 0, SIZE_QUEUED);
             for(i = 0; m_queued[i] != 0; i += SIZE_HEADER + value_len)
             {

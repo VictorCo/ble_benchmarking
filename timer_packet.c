@@ -22,14 +22,14 @@ void timer_start(void)
 {
     uint32_t err_code;
     err_code = app_timer_start(m_timer_id, TIMER_INTERVAL, NULL);
-    SEGGER_RTT_printf(0, "err code start timer : %d\n", err_code);
+    APP_ERROR_CHECK(err_code);
 }
 
 void timer_stop(void)
 {
     uint32_t err_code;
     err_code = app_timer_stop(m_timer_id);
-    SEGGER_RTT_printf(0, "err code stop timer : %d\n", err_code);
+    APP_ERROR_CHECK(err_code);
 }
 
 void timer_restart(void)
