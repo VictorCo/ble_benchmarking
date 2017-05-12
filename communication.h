@@ -19,6 +19,9 @@
                                         -> bit 3 : attribut
                                         -> bit 4 : à définir
                                     */
+                                   
+
+
 // Les commandes disponible
 enum TYPE_CMD_NAME
 {
@@ -26,17 +29,27 @@ enum TYPE_CMD_NAME
     TEST_SPEED_UP,
     SET_PARAM,
     GET_TIME,
-    NB_TYPE_PARAM
+    N_TYPE_CMD
 };
 
 //Les parametres disponible
 enum TYPE_PARAM_NAME
 {
-	START = 0,
+    START = N_TYPE_CMD,
     CONTINUE,
     STOP,
-    MODIFY
+    MODIFY,
+    N_TYPE_PARAM,
+    N_INPUT = N_TYPE_PARAM
 };
+
+typedef struct
+{
+    uint8_t type;
+    uint8_t n_attribute;
+    const char* const name[2];  //une commande, parametre attribut peut avoir 2 noms, son nom complet + un raccourci
+}c_def_input;
+
 
 typedef struct
 {
@@ -56,9 +69,9 @@ typedef struct
 
 
 void communication_start(char *s, int length, ble_nus_t *p_nus);
-void display_param(c_msg_t *p_msg);
 uint8_t parse(c_msg_t *p_msg);
 uint8_t skip_separator(char *s);
 uint8_t get_type(char *s, uint8_t old_type);    //obtient le type du mot suivant la position dans la chaine
+bool check_input_word_exist(c_msg_t *p_msg_t);
 
 

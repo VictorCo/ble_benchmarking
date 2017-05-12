@@ -19,7 +19,6 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
 
     m_user_block.p_mem = m_queued;
     m_user_block.len = SIZE_QUEUED;
-
     switch(p_ble_evt->header.evt_id)
     {
         case BLE_EVT_USER_MEM_REQUEST :
@@ -37,7 +36,6 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
                 memcpy(data + value_offset, &m_queued[i + SIZE_HEADER], value_len);
                 len += value_len;
             }
-                    
             p_ble_nus->data_handler(p_ble_nus, (uint8_t*)data, len);
             break;
             
@@ -52,7 +50,7 @@ void send_long_packet(ble_nus_t *p_nus, char *s, int length)
     uint32_t pos = 0;
     uint32_t length_packet;
     uint32_t offset = length;
-    uint32_t err_code;
+    //uint32_t err_code;
 
     for(; pos != length; offset = length - pos)
     {

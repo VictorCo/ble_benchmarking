@@ -7,6 +7,19 @@
 #include "long_packet.h"
 
 
+const c_def_input m_def_input[N_INPUT] = 
+    {
+        {TEST_SPEED_DOWN,   0, {"test_speed_down",  "tsd"   }},
+        {TEST_SPEED_UP,     0, {"test_speed_up",    "tsu"   }},
+        {SET_PARAM,         0, {"set_param",        "sp"    }},
+        {GET_TIME,          0, {"get_time",         "gt"    }},
+        {START,             0, {"start",            "s"     }},
+        {CONTINUE,          0, {"continue",         "c"     }},
+        {STOP,              0, {"stop",             "e"     }},
+        {MODIFY,            2, {"modify",           "m"     }}
+    };
+
+
 void communication_start(char *s, int length, ble_nus_t *p_nus)
 {
     c_msg_t msg;
@@ -27,7 +40,9 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
     
     if(err_code == MESSAGE_SUCCES)
     {
-        if(p_nus->is_notification_enabled)
+        
+        if(check_input_word_exist(&msg)
+           && p_nus->is_notification_enabled)
         {
             send_long_packet(p_nus, s, length);
         }
@@ -54,7 +69,8 @@ uint8_t parse(c_msg_t *p_msg)
 	
     for(char * i = p_msg->start+1; i != p_msg->end; i++)
     {
-        if( (skip = skip_separator(i)) )      //si on atteint un nouveau type de mot
+        skip = skip_separator(i);
+        if(skip)      //si on atteint un nouveau type de mot
         {
             if(old_type != TYPE_NULL)      //on ferme l'ancien type si il existe
             {
@@ -105,7 +121,7 @@ uint8_t parse(c_msg_t *p_msg)
         return MESSAGE_ERROR_NO_CMD;
     }
 		
-    display_param(p_msg);
+    //display_param(p_msg);
     return MESSAGE_SUCCES;
 }
 
@@ -136,15 +152,27 @@ uint8_t get_type(char *s, uint8_t old_type)
     return TYPE_ATTRIBUTE;
 }
 
-void display_param(c_msg_t *p_msg)
+bool check_input_word_exist(c_msg_t *p_msg_t)
 {
-    c_word_t *p = &p_msg->word[0];
-    for(int i = 0; i < p_msg->nWord; i++, p = &p_msg->word[i])
+    int i,j;
+    
+    for(i = 0; i < p_msg_t->nWord; i++)
     {
-        SEGGER_RTT_printf(0,
-                          "***\nWord n : %d\nAddr param : %d\ntype : %x, len : %d\nAddr start: %d\n",
-                          i, p,p->type, p->length, p->start);
+        for(j = 0; j < N_INPUT; j++)
+        {
+            if(p_msg_t->word[i].length == strlen(m_def_input[j].name[0]) 
+                && memcmp(p_msg_t->word[i].start, m_def_input[j].name[0], p_msg_t->word[i].length) == 0)
+            {
+                NRF_LOG_PRINTF("%s trouve\n", m_def_input[j].name[0]);
+                break;
+            }
+        }
+        if (j == N_INPUT)
+        {
+            NRF_LOG_PRINTF("param inconnu\n");
+        }
     }
+    return true;
 }
 	
 

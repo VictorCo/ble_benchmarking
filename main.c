@@ -525,7 +525,7 @@ static void power_manage(void)
 int main(void)
 {
 //	test time
-    uint32_t v_timer;
+//    uint32_t v_timer;
     
     //test pointeur
 //    uint8_t tab8[] = {1,2,3,4};
