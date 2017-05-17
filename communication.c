@@ -18,19 +18,21 @@ const c_def_input m_def_input[N_INPUT] =
         {STOP,              0, {"stop",             "e"     }},
         {MODIFY,            2, {"modify",           "m"     }}
     };
+    
+c_info_t m_info_t = 
+    {
+        .b_timestamp_start = false,
+        .b_timestamp_available = false
+    };
 
 
 void communication_start(char *s, int length, ble_nus_t *p_nus)
 {
     c_msg_t msg;
     int err_code;
-    char mot[SIZE_QUEUED+1];
-    for(int i = 0; i < length; i++)
-    {
-        mot[i] = *(s+i);
-    }
-    mot[length] = '\0';
+    char mot[SIZE_QUEUED];
 
+    memcpy(mot, s, length);
     memset(&msg, 0, sizeof(c_msg_t));
     msg.length = length;
     msg.start = mot;
@@ -44,9 +46,9 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
         if(check_input_word_exist(&msg)
            && p_nus->is_notification_enabled)
         {
+            communication_run(&msg, p_nus);
             send_long_packet(p_nus, s, length);
         }
-        timer_restart();
     }
     
     else
@@ -76,7 +78,7 @@ uint8_t parse(c_msg_t *p_msg)
             {
                 word_current->length = i - word_current->start;
                 
-                if (!word_current->length)
+                if(!word_current->length)
                 {
                     return MESSAGE_ERROR_LEN_WORD;
                 }
@@ -84,7 +86,7 @@ uint8_t parse(c_msg_t *p_msg)
                 word_current = NULL;
             }
             i += skip;
-            if (i == p_msg->end)
+            if(i == p_msg->end)
             {
                 break;
             }
@@ -98,7 +100,7 @@ uint8_t parse(c_msg_t *p_msg)
             word_current->type = get_type(i, old_type);
             word_current->start = i;  
             //si c'est un parametre on deplace le curseur de 1 pour le '-'
-            if (word_current->type == TYPE_PARAM)
+            if(word_current->type == TYPE_PARAM)
             {
                 word_current->start++; 
             }
@@ -120,8 +122,6 @@ uint8_t parse(c_msg_t *p_msg)
     {
         return MESSAGE_ERROR_NO_CMD;
     }
-		
-    //display_param(p_msg);
     return MESSAGE_SUCCES;
 }
 
@@ -139,12 +139,12 @@ uint8_t skip_separator(char *s)
 
 uint8_t get_type(char *s, uint8_t old_type)
 {
-    if (old_type == TYPE_NULL)
+    if(old_type == TYPE_NULL)
     {
         return TYPE_CMD;
     }
     
-    if (*s == MESSAGE_TYPE_PARAM)
+    if(*s == MESSAGE_TYPE_PARAM)
     {
         return TYPE_PARAM;
     }
@@ -154,25 +154,92 @@ uint8_t get_type(char *s, uint8_t old_type)
 
 bool check_input_word_exist(c_msg_t *p_msg_t)
 {
-    int i,j;
+    int i,j,k;
+    bool find;
     
     for(i = 0; i < p_msg_t->nWord; i++)
     {
-        for(j = 0; j < N_INPUT; j++)
+        for(j = 0, find = false; j < N_INPUT && !find ; j++)
         {
-            if(p_msg_t->word[i].length == strlen(m_def_input[j].name[0]) 
-                && memcmp(p_msg_t->word[i].start, m_def_input[j].name[0], p_msg_t->word[i].length) == 0)
+            for(k = 0; k < N_NAME; k++)
             {
-                NRF_LOG_PRINTF("%s trouve\n", m_def_input[j].name[0]);
-                break;
+                if(p_msg_t->word[i].length == strlen(m_def_input[j].name[k]) 
+                    && memcmp(p_msg_t->word[i].start, m_def_input[j].name[k], p_msg_t->word[i].length) == 0)
+                {
+                    NRF_LOG_PRINTF("%s trouve\n", m_def_input[j].name[k]);
+                    p_msg_t->word[i].name = m_def_input[j].type;
+                    find = true;
+                    break;
+                }
             }
         }
-        if (j == N_INPUT)
+        if(j == N_INPUT)
         {
             NRF_LOG_PRINTF("param inconnu\n");
+            return false;
         }
     }
     return true;
+}
+
+void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
+{
+    const c_word_t *cmd = p_msg_t->word;    //le premier mot est forcement la commande
+    const c_word_t *param = NULL;
+    char data_send[16];
+    int i;
+    
+    for(i = 0; i < p_msg_t->nWord; i ++)
+    {
+        param = &p_msg_t->word[i];
+        switch (cmd->name)
+        {
+            case TEST_SPEED_DOWN :
+                
+                if(param->name == START)
+                {
+                    m_info_t.b_timestamp_start = true;
+                    m_info_t.timestamp_start = timer_get_ticks();
+                }
+                
+                else if(param->name == STOP)
+                {
+                    if(!m_info_t.b_timestamp_start)
+                    {
+                        NRF_LOG_PRINTF("timer non lance\n");
+                        return;
+                    }
+                    m_info_t.b_timestamp_start = false;
+                    m_info_t.b_timestamp_available = true;
+                    m_info_t.timestamp = timer_ticks_to_ms( timer_get_ticks() - m_info_t.timestamp_start);
+                    NRF_LOG_PRINTF("temps ecoule :  %d\n", m_info_t.timestamp );
+                }
+                break;
+            
+            case TEST_SPEED_UP :
+                
+                break;
+            
+            case SET_PARAM :
+                
+                break;
+            
+            case GET_TIME :
+                if(m_info_t.b_timestamp_available)
+                {
+                    sprintf(data_send, "%d", m_info_t.timestamp);
+                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME, strlen(RESULT_MSG_GET_TIME));
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send));
+                }
+                
+                else
+                   NRF_LOG_PRINTF("timer non dispo\n"); 
+                break;
+            
+        }
+       
+    }
+
 }
 	
 

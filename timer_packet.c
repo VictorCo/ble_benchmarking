@@ -8,7 +8,6 @@ uint32_t m_timer_value;
 uint32_t timer_init(void)
 {
     uint32_t err_code;
-
     err_code = app_timer_create(&m_timer_id,
                                 APP_TIMER_MODE_REPEATED, 
                                 timeout_handler);
