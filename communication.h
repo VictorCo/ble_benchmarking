@@ -16,7 +16,8 @@
 
 #define N_NAME          0x2         //nombre de nom different possible pour un input
 
-#define RESULT_MSG_GET_TIME "Get time : "
+#define RESULT_MSG_GET_TIME_UP "UP get time : "
+#define RESULT_MSG_GET_TIME_DOWN "DOWN get time : "
 
 
 // Les commandes disponible
@@ -71,8 +72,10 @@ typedef struct
 {
     uint32_t timestamp_start;     //valeur du timestamp au moment de start un test
     uint32_t timestamp;           //valeur du timestamp entre start et stop
+    uint8_t timer_name;           //TEST_SPEED_UP ou TEST_SPEED_DOWN
     bool b_timestamp_start;       //savoir si un timer est deja lance
-    bool b_timestamp_available;   //un timer est disponible pour la commande GET_TIME ?
+    bool b_timestamp_available;   //un timer est disponible pour la commande GET_TIME ? 
+                                  //si un autre timer est lance on laisse la valeur de l'ancien timer disponible.
 }c_info_t;
 
 
@@ -81,6 +84,7 @@ uint8_t parse(c_msg_t *p_msg);
 uint8_t skip_separator(char *s);
 uint8_t get_type(char *s, uint8_t old_type);
 bool check_input_word_exist(c_msg_t *p_msg_t);
+bool check_argument_number(const c_word_t *p_param, uint8_t nb_argument); //regarde si un parametre passe contient dans le message transmis le bon nombre d'arguments
 void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus);
 
 

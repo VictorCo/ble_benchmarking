@@ -77,7 +77,7 @@ uint8_t parse(c_msg_t *p_msg)
             if(old_type != TYPE_NULL)      //on ferme l'ancien type si il existe
             {
                 word_current->length = i - word_current->start;
-                
+                word_current->start[word_current->length] = '\0';
                 if(!word_current->length)
                 {
                     return MESSAGE_ERROR_LEN_WORD;
@@ -152,6 +152,12 @@ uint8_t get_type(char *s, uint8_t old_type)
     return TYPE_ATTRIBUTE;
 }
 
+/*
+Regarde si les commandes, parametres et attributs ont la bonne synthaxe
+Si un attribut est présent sans parametre avant -> erreur
+Gère si un paramètre doit avoir 0, 1, ou plusieurs paramètres
+Si la fonction renvoie true on est assusré d'avoir la bonne synthaxe d'une commande
+*/
 bool check_input_word_exist(c_msg_t *p_msg_t)
 {
     int i,j,k;
@@ -159,18 +165,35 @@ bool check_input_word_exist(c_msg_t *p_msg_t)
     
     for(i = 0; i < p_msg_t->nWord; i++)
     {
-        for(j = 0, find = false; j < N_INPUT && !find ; j++)
+        if(  !((TYPE_CMD | TYPE_PARAM) & p_msg_t->word[i].type ) )
+        {
+            NRF_LOG_PRINTF("commande ou param requis\n");
+            return false;
+        }
+        for(j = 0, find = false; j < N_INPUT; j++)
         {
             for(k = 0; k < N_NAME; k++)
             {
-                if(p_msg_t->word[i].length == strlen(m_def_input[j].name[k]) 
-                    && memcmp(p_msg_t->word[i].start, m_def_input[j].name[k], p_msg_t->word[i].length) == 0)
+                if(strcmp(p_msg_t->word[i].start, m_def_input[j].name[k]) == 0)
                 {
                     NRF_LOG_PRINTF("%s trouve\n", m_def_input[j].name[k]);
                     p_msg_t->word[i].name = m_def_input[j].type;
+                    
+                    if( (i + m_def_input[j].n_attribute) > p_msg_t->nWord
+                        || !check_argument_number(&p_msg_t->word[i], m_def_input[j].n_attribute) )
+                    {
+                        NRF_LOG_PRINTF("il manque des arguments\n");
+                        return false;
+                    }
+                    i += m_def_input[j].n_attribute;
                     find = true;
                     break;
                 }
+            }
+            
+            if(find)
+            {
+                break;
             }
         }
         if(j == N_INPUT)
@@ -182,10 +205,29 @@ bool check_input_word_exist(c_msg_t *p_msg_t)
     return true;
 }
 
+/*
+Depuis un paramètre donné, regarde si il y a le bon nombre d'argument attendu
+*/
+bool check_argument_number(const c_word_t *p_param, uint8_t nb_argument)
+{
+    int i;
+    for(i = 0; i < nb_argument; i++)
+    {
+        if( !((p_param+i+1)->type == TYPE_ATTRIBUTE) )
+        {
+            return false;
+        }
+    }
+    
+    return true;
+}
+
 void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
 {
     const c_word_t *cmd = p_msg_t->word;    //le premier mot est forcement la commande
     const c_word_t *param = NULL;
+    const c_word_t *modify_option;
+    const c_word_t *modify_value;
     char data_send[16];
     int i;
     
@@ -194,10 +236,27 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
         param = &p_msg_t->word[i];
         switch (cmd->name)
         {
+            case TEST_SPEED_UP :
             case TEST_SPEED_DOWN :
                 
+                //si un timer est deja lancé on regarde si la commande porte sur le meme type de timer
+                if(m_info_t.b_timestamp_start)
+                {
+                    if(m_info_t.timer_name != cmd->name)
+                    {
+                        NRF_LOG_PRINTF("Pas le bon type de timer\n");
+                        return;
+                    }
+                }
+            
                 if(param->name == START)
                 {
+                    if(m_info_t.b_timestamp_start)
+                    {
+                        NRF_LOG_PRINTF("Un timer est deja lance\n");
+                        return;
+                    }
+                    m_info_t.timer_name = cmd->name;
                     m_info_t.b_timestamp_start = true;
                     m_info_t.timestamp_start = timer_get_ticks();
                 }
@@ -212,23 +271,36 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                     m_info_t.b_timestamp_start = false;
                     m_info_t.b_timestamp_available = true;
                     m_info_t.timestamp = timer_ticks_to_ms( timer_get_ticks() - m_info_t.timestamp_start);
-                    NRF_LOG_PRINTF("temps ecoule :  %d\n", m_info_t.timestamp );
+                    
+                    if(m_info_t.timer_name == TEST_SPEED_UP)
+                        NRF_LOG_PRINTF("(UP) temps ecoule : %d\n", m_info_t.timestamp );
+                    
+                    else if(m_info_t.timer_name == TEST_SPEED_DOWN)
+                        NRF_LOG_PRINTF("(DOWN) temps ecoule : %d\n", m_info_t.timestamp );
                 }
                 break;
             
-            case TEST_SPEED_UP :
-                
-                break;
-            
             case SET_PARAM :
-                
+                if(param->name == MODIFY)
+                {
+                    modify_option = &p_msg_t->word[++i];
+                    modify_value = &p_msg_t->word[++i];
+                    
+                    
+                    
+                }
                 break;
             
             case GET_TIME :
                 if(m_info_t.b_timestamp_available)
                 {
+
+                    if(m_info_t.timer_name == TEST_SPEED_UP)
+                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_UP, strlen(RESULT_MSG_GET_TIME_UP));
+                    else if(m_info_t.timer_name == TEST_SPEED_DOWN)
+                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_DOWN, strlen(RESULT_MSG_GET_TIME_DOWN));
+                    
                     sprintf(data_send, "%d", m_info_t.timestamp);
-                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME, strlen(RESULT_MSG_GET_TIME));
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send));
                 }
                 
@@ -240,7 +312,6 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
        
     }
 
-}
-	
+}	
 
 
