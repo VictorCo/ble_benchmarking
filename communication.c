@@ -1,20 +1,27 @@
 #include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
 #include "communication.h"
 #include "communication_error.h"
 #include "SEGGER_RTT.h"
 #include "timer_packet.h"
 #include "ble_nus.h"
 #include "long_packet.h"
+#include "def.h"
 
 
+//Les indices du tableau doivent être dans le même ordre que que les enums TYPE_CMD_NAME et TYPE_PARAM_NAME
+//Voir dans communication.h
+//En procédant ainsi nous pouvous atteindre m_def_input[TEST_SPEED_DOWN] etc...
 const c_def_input m_def_input[N_INPUT] = 
     {
         {TEST_SPEED_DOWN,   0, {"test_speed_down",  "tsd"   }},
         {TEST_SPEED_UP,     0, {"test_speed_up",    "tsu"   }},
         {SET_PARAM,         0, {"set_param",        "sp"    }},
         {GET_TIME,          0, {"get_time",         "gt"    }},
+        {GET_PARAMS,        0, {"get_params",       "gp"    }},
         {START,             0, {"start",            "s"     }},
-        {CONTINUE,          0, {"continue",         "c"     }},
+        {CONTINUE,          1, {"continue",         "c"     }},
         {STOP,              0, {"stop",             "e"     }},
         {MODIFY,            2, {"modify",           "m"     }}
     };
@@ -22,7 +29,16 @@ const c_def_input m_def_input[N_INPUT] =
 c_info_t m_info_t = 
     {
         .b_timestamp_start = false,
-        .b_timestamp_available = false
+        .b_timestamp_available = false,
+        .b_stop_down = false,
+        .remaining_byte = 0,
+        .conn_params =
+            {
+                .min_conn_interval = MIN_CONN_INTERVAL,
+                .max_conn_interval = MAX_CONN_INTERVAL,
+                .slave_latency = SLAVE_LATENCY,
+                .conn_sup_timeout = CONN_SUP_TIMEOUT
+            }
     };
 
 
@@ -30,14 +46,18 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
 {
     c_msg_t msg;
     int err_code;
-    char mot[SIZE_QUEUED];
+    char mot[SIZE_QUEUED+1];
+    char *c_lower;
 
     memcpy(mot, s, length);
     memset(&msg, 0, sizeof(c_msg_t));
     msg.length = length;
     msg.start = mot;
     msg.end = mot + length-1;
-
+    *(msg.end+1) = '\0';
+    
+    for (c_lower = msg.start ; *c_lower; ++c_lower) *c_lower = tolower(*c_lower);
+        
     err_code = parse(&msg);
     
     if(err_code == MESSAGE_SUCCES)
@@ -47,7 +67,7 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
            && p_nus->is_notification_enabled)
         {
             communication_run(&msg, p_nus);
-            send_long_packet(p_nus, s, length);
+            //send_long_packet(p_nus, s, length);
         }
     }
     
@@ -125,6 +145,11 @@ uint8_t parse(c_msg_t *p_msg)
     return MESSAGE_SUCCES;
 }
 
+/*
+Permet de savoir si on atteint un séparateur de mot
+Si oui renvoi le nombre de séparateur à la suite
+*/
+
 uint8_t skip_separator(char *s)
 {
     uint8_t skip = 0;
@@ -156,7 +181,7 @@ uint8_t get_type(char *s, uint8_t old_type)
 Regarde si les commandes, parametres et attributs ont la bonne synthaxe
 Si un attribut est présent sans parametre avant -> erreur
 Gère si un paramètre doit avoir 0, 1, ou plusieurs paramètres
-Si la fonction renvoie true on est assusré d'avoir la bonne synthaxe d'une commande
+Si la fonction renvoie true on est assuré d'avoir la bonne synthaxe d'une commande
 */
 bool check_input_word_exist(c_msg_t *p_msg_t)
 {
@@ -227,7 +252,8 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
     const c_word_t *cmd = p_msg_t->word;    //le premier mot est forcement la commande
     const c_word_t *param = NULL;
     const c_word_t *modify_option;
-    const c_word_t *modify_value;
+    uint16_t modify_value;
+    uint32_t err_code;
     char data_send[16];
     int i;
     
@@ -258,6 +284,7 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                     }
                     m_info_t.timer_name = cmd->name;
                     m_info_t.b_timestamp_start = true;
+                    m_info_t.byte_number = 0;
                     m_info_t.timestamp_start = timer_get_ticks();
                 }
                 
@@ -268,24 +295,89 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                         NRF_LOG_PRINTF("timer non lance\n");
                         return;
                     }
+                    
+                    if(m_info_t.remaining_byte)
+                    {
+                        m_info_t.b_stop_down = true;
+                        NRF_LOG_PRINTF("Il reste des bits a UP\nStop mis en attente\n");
+                        return;
+                    }
+                    m_info_t.b_stop_down = false;
                     m_info_t.b_timestamp_start = false;
                     m_info_t.b_timestamp_available = true;
-                    m_info_t.timestamp = timer_ticks_to_ms( timer_get_ticks() - m_info_t.timestamp_start);
+
+                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_STOP_TIMER, strlen(RESULT_MSG_STOP_TIMER), false);
                     
+                    m_info_t.timestamp = timer_ticks_to_ms( timer_get_ticks() - m_info_t.timestamp_start);                    
                     if(m_info_t.timer_name == TEST_SPEED_UP)
                         NRF_LOG_PRINTF("(UP) temps ecoule : %d\n", m_info_t.timestamp );
                     
                     else if(m_info_t.timer_name == TEST_SPEED_DOWN)
                         NRF_LOG_PRINTF("(DOWN) temps ecoule : %d\n", m_info_t.timestamp );
                 }
+                
+                else if(param->name == CONTINUE)
+                {
+                    if(m_info_t.b_timestamp_start)
+                    {
+                        if(cmd->name == TEST_SPEED_UP)
+                        {
+                            m_info_t.byte_number += p_msg_t->length;
+                            i++;
+                        }
+                    
+                        else if(cmd->name == TEST_SPEED_DOWN)
+                        {
+                            m_info_t.total_byte = (m_info_t.remaining_byte) ? 
+                                atoi(p_msg_t->word[++i].start) + m_info_t.total_byte
+                                : atoi(p_msg_t->word[++i].start);
+                            
+                            m_info_t.remaining_byte = m_info_t.total_byte - m_info_t.remaining_byte;
+                            
+                            if(m_info_t.remaining_byte)
+                            {
+                                send_dummy_data(p_nus, &m_info_t, m_info_t.remaining_byte);
+                            }
+                        }                        
+                    }
+                }
+                
                 break;
             
             case SET_PARAM :
                 if(param->name == MODIFY)
                 {
                     modify_option = &p_msg_t->word[++i];
-                    modify_value = &p_msg_t->word[++i];
+                    modify_value = atoi(p_msg_t->word[++i].start);
                     
+                    if(strcmp(modify_option->start, M_CON_INTERVAL_MIN) == 0)
+                    {
+                        m_info_t.conn_params.min_conn_interval = MSEC_TO_UNITS(modify_value, UNIT_1_25_MS);
+                        NRF_LOG_PRINTF("Modify interval min\n");
+                    }
+                    else if(strcmp(modify_option->start, M_CON_INTERVAL_MAX) == 0)
+                    {
+                        m_info_t.conn_params.max_conn_interval = MSEC_TO_UNITS(modify_value, UNIT_1_25_MS);
+                        NRF_LOG_PRINTF("Modify interval max\n");
+                    }
+                    else if(strcmp(modify_option->start, M_CON_SLAVE_LATENCY) == 0)
+                    {
+                        m_info_t.conn_params.slave_latency = modify_value;
+                        NRF_LOG_PRINTF("Modify slave latency\n");
+                    }
+                    else if(strcmp(modify_option->start, M_CON_TIMEOUT) == 0)
+                    {
+                        m_info_t.conn_params.conn_sup_timeout = modify_value;
+                        NRF_LOG_PRINTF("Modify conn sup timeout\n");
+                    }
+                    else
+                    {
+                        NRF_LOG_PRINTF("Nom de parametre de connexion inconnu\n");
+                    }
+                    NRF_LOG_PRINTF("value = %d\n",  m_info_t.conn_params.min_conn_interval);
+                    sd_ble_gap_conn_param_update(p_nus->conn_handle, &m_info_t.conn_params);
+                    NRF_LOG_PRINTF("modif_value = %d\n", modify_value);
+                    NRF_LOG_PRINTF("value = %d\n",  m_info_t.conn_params.min_conn_interval);
                     
                     
                 }
@@ -296,22 +388,71 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                 {
 
                     if(m_info_t.timer_name == TEST_SPEED_UP)
-                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_UP, strlen(RESULT_MSG_GET_TIME_UP));
+                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_UP, strlen(RESULT_MSG_GET_TIME_UP), false);
                     else if(m_info_t.timer_name == TEST_SPEED_DOWN)
-                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_DOWN, strlen(RESULT_MSG_GET_TIME_DOWN));
+                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_DOWN, strlen(RESULT_MSG_GET_TIME_DOWN), false);
                     
                     sprintf(data_send, "%d", m_info_t.timestamp);
-                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send));
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
+                    
+                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_BYTE, strlen(RESULT_MSG_GET_TIME_BYTE), false);
+                    
+                    sprintf(data_send, "%d", m_info_t.byte_number);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                 }
                 
                 else
                    NRF_LOG_PRINTF("timer non dispo\n"); 
                 break;
-            
+                
+            case GET_PARAMS :
+                if(sd_ble_gap_ppcp_get(&m_info_t.conn_params) == NRF_SUCCESS)
+                {
+                    NRF_LOG_PRINTF("GET_PARAMS\n");
+                    NRF_LOG_PRINTF("Interval min : %d\n", m_info_t.conn_params.min_conn_interval);
+                    NRF_LOG_PRINTF("Interval max : %d\n", m_info_t.conn_params.max_conn_interval);
+                    NRF_LOG_PRINTF("Slave latency : %d\n", m_info_t.conn_params.slave_latency);
+                    NRF_LOG_PRINTF("Conn sup timeout : %d\n", m_info_t.conn_params.conn_sup_timeout);
+                }
+                break;
         }
        
     }
 
 }	
 
+//quand long_packet.c recoit l'event BLE_EVT_TX_COMPLETE
+//on regarde si on doit encore upload des données
+void continue_send_byte_up(ble_nus_t *p_nus)
+{
+    if(m_info_t.timestamp_start)
+    {
+        if(m_info_t.timer_name == TEST_SPEED_DOWN)
+        {
+            if(m_info_t.remaining_byte)
+            {
+                send_dummy_data(p_nus, &m_info_t, m_info_t.remaining_byte);
+            }
+            
+            else if(m_info_t.b_stop_down)   //si on a recu la commande de stopper le timer alors qu'on avait pas toute les données
+            {
+                //on renvoie une instruction comme quoi on veux stop le timer
+                communication_start("s tsd -e e", 10, p_nus);
+            }
+        }
+    }
+}
 
+void communication_update_params(ble_evt_t *p_evt)
+{
+    switch(p_evt->header.evt_id)
+    {
+        case BLE_GAP_EVT_CONN_PARAM_UPDATE :
+            m_info_t.conn_params = p_evt->evt.gap_evt.params.conn_param_update.conn_params;
+            break;
+        
+        
+        default :
+            break;
+    }
+}

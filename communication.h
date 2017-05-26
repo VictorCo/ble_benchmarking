@@ -1,3 +1,6 @@
+#ifndef COMMUNICATION_H
+#define COMMUNICATION_H
+
 #include <stdint.h>
 #include "ble_nus.h"
 
@@ -16,8 +19,15 @@
 
 #define N_NAME          0x2         //nombre de nom different possible pour un input
 
-#define RESULT_MSG_GET_TIME_UP "UP get time : "
-#define RESULT_MSG_GET_TIME_DOWN "DOWN get time : "
+#define M_CON_INTERVAL_MIN  "interval_min"
+#define M_CON_INTERVAL_MAX  "interval_max"
+#define M_CON_SLAVE_LATENCY "slave_latency"
+#define M_CON_TIMEOUT       "timeout"
+
+#define RESULT_MSG_STOP_TIMER       "Stop timer"
+#define RESULT_MSG_GET_TIME_UP      "UP get time : "
+#define RESULT_MSG_GET_TIME_DOWN    "DOWN get time : "
+#define RESULT_MSG_GET_TIME_BYTE    "Octet : "
 
 
 // Les commandes disponible
@@ -27,6 +37,7 @@ enum TYPE_CMD_NAME
     TEST_SPEED_UP,
     SET_PARAM,
     GET_TIME,
+    GET_PARAMS,
     N_TYPE_CMD
 };
 
@@ -53,7 +64,7 @@ typedef struct
 {
     uint8_t type;       //cmd, param, attr...
     uint8_t name;       //test_speed_down, continue...
-    uint8_t length;
+    uint16_t length;
     char *start;
 }c_word_t;
 
@@ -61,9 +72,7 @@ typedef struct
 {
     c_word_t word[MAX_WORD];
     uint8_t nWord;
-    uint8_t nParam;
-    uint8_t nAttribute;
-    uint8_t length;
+    uint16_t length;
     char *start;
     char *end;
 }c_msg_t;
@@ -73,9 +82,15 @@ typedef struct
     uint32_t timestamp_start;     //valeur du timestamp au moment de start un test
     uint32_t timestamp;           //valeur du timestamp entre start et stop
     uint8_t timer_name;           //TEST_SPEED_UP ou TEST_SPEED_DOWN
+    uint16_t byte_number;         //nombre d'octet echangé dans une instance de test complete
+    uint16_t remaining_byte;      //nombre d'octets restant a envoyer en DOWN dans le cas BLE_ERROR_NO_TX_PACKETS
+    uint16_t total_byte;          //nombre total d'octet à transferer (utilisé dans le test_down)
     bool b_timestamp_start;       //savoir si un timer est deja lance
     bool b_timestamp_available;   //un timer est disponible pour la commande GET_TIME ? 
                                   //si un autre timer est lance on laisse la valeur de l'ancien timer disponible.
+    bool b_stop_down;             //on stop le timer down avant de recevoir toutes les données ?
+    
+    ble_gap_conn_params_t conn_params;
 }c_info_t;
 
 
@@ -86,5 +101,9 @@ uint8_t get_type(char *s, uint8_t old_type);
 bool check_input_word_exist(c_msg_t *p_msg_t);
 bool check_argument_number(const c_word_t *p_param, uint8_t nb_argument); //regarde si un parametre passe contient dans le message transmis le bon nombre d'arguments
 void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus);
+void continue_send_byte_up(ble_nus_t *p_nus);
+void communication_update_params(ble_evt_t *p_evt);
+
+#endif
 
 

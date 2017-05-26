@@ -1,4 +1,5 @@
 #include <string.h>
+#include "nrf_error.h"
 #include "long_packet.h"
 #include "ble.h"
 #include "ble_nus.h"
@@ -39,6 +40,15 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
             p_ble_nus->data_handler(p_ble_nus, (uint8_t*)data, len);
             break;
             
+            
+        case BLE_EVT_TX_COMPLETE :
+            p_ble_nus->available_channel++;
+        
+            if(p_ble_nus->available_channel == p_ble_nus->max_channel)
+                continue_send_byte_up(p_ble_nus);
+            
+            break;
+            
         default :
                 
             break;	
@@ -64,12 +74,35 @@ void send_long_packet(ble_nus_t *p_nus, char *s, int length)
     }
 }
 
-void displayRx(ble_nus_t *p_ble_nus)
+void send_dummy_data(ble_nus_t *p_nus, c_info_t *p_info, int length)
 {
-    uint32_t err_code;
-    ble_gatts_value_t p_ble_gatts_value;
-    err_code = sd_ble_gatts_value_get(p_ble_nus->conn_handle, p_ble_nus->tx_handles.value_handle, &p_ble_gatts_value);
-    SEGGER_RTT_printf(0, "Valeur Rx : %s\nErr Code : %d\n", p_ble_gatts_value.p_value, err_code);
+#define SIZE BLE_NUS_MAX_DATA_LEN
+    char *packet[SIZE];
+    memset(packet,0x31,SIZE);
+    uint16_t i;
+    uint8_t extra = length%SIZE;
+    uint16_t err_code;
+    
+    if(extra)
+    {
+        err_code = ble_nus_string_send(p_nus, (uint8_t*)&packet, extra, true);
+    }
+    
+    if(length > SIZE)
+    {
+        for(i = 0; i < length; i+=SIZE)
+        {
+            err_code = ble_nus_string_send(p_nus, (uint8_t *)packet, SIZE, true);
+            if(err_code == BLE_ERROR_NO_TX_PACKETS)
+            {
+                p_info->remaining_byte = length - extra - i;
+                p_info->byte_number = p_info->total_byte - p_info->remaining_byte;
+                return;
+            }
+        }
+    }
+    p_info->byte_number += length;
+    p_info->remaining_byte = 0;
 }
 
 
