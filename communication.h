@@ -9,7 +9,7 @@
 #define MESSAGE_TYPE_PARAM          '-'
 #define MESSAGE_SEPARATOR           ' '
 
-#define MAX_WORD        0x10        //le maximum d'action speciale disponible
+#define MAX_WORD        0x10        //le maximum de mot possible en une commande
 
 #define TYPE_NULL       0x0
 #define TYPE_CMD        0x1
@@ -19,6 +19,7 @@
 
 #define N_NAME          0x2         //nombre de nom different possible pour un input
 
+#define N_CON_PARAM 4       //nombre de parametre de connexion           
 #define M_CON_INTERVAL_MIN  "interval_min"
 #define M_CON_INTERVAL_MAX  "interval_max"
 #define M_CON_SLAVE_LATENCY "slave_latency"
@@ -38,6 +39,7 @@ enum TYPE_CMD_NAME
     SET_PARAM,
     GET_TIME,
     GET_PARAMS,
+    GET_CONNECTION_SECURITY,
     N_TYPE_CMD
 };
 
@@ -52,12 +54,20 @@ enum TYPE_PARAM_NAME
     N_INPUT = N_TYPE_PARAM
 };
 
+
 typedef struct
 {
     uint8_t type;
     uint8_t n_attribute;
-    const char* const name[N_NAME];  //une commande, parametre attribut peut avoir 2 noms, son nom complet + un raccourci
+    const char* const name[N_NAME];  //une commande, parametre attribut peut avoir N_NAME nom(s)
+                                     //pour le moment : son nom complet + un raccourci
 }c_def_input;
+
+typedef struct
+{
+    char *param_name;
+    uint16_t *param_value;
+}c_def_conn_param;
 
 
 typedef struct
@@ -103,6 +113,7 @@ bool check_argument_number(const c_word_t *p_param, uint8_t nb_argument); //rega
 void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus);
 void continue_send_byte_up(ble_nus_t *p_nus);
 void communication_update_params(ble_evt_t *p_evt);
+int8_t get_conn_param(char *s);
 
 #endif
 
