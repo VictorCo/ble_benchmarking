@@ -86,6 +86,7 @@ void send_dummy_data(ble_nus_t *p_nus, c_info_t *p_info, int length)
     if(extra)
     {
         err_code = ble_nus_string_send(p_nus, (uint8_t*)&packet, extra, true);
+        p_info->n_packet++;
     }
     
     if(length > SIZE)
@@ -99,6 +100,7 @@ void send_dummy_data(ble_nus_t *p_nus, c_info_t *p_info, int length)
                 p_info->byte_number = p_info->total_byte - p_info->remaining_byte;
                 return;
             }
+            p_info->n_packet++;
         }
     }
     p_info->byte_number += length;

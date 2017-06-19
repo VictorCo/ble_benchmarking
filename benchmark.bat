@@ -32,10 +32,12 @@ SET msg_timeout=Timeout
 SET msg_check=0
 SET trouve=0
 
-SET file_log=Log 2017-06-16 142859.txt
+SET file_log=
 SET file_excel=temps_transfert.csv
 
 SET n_line=0
+
+SET program=%~0 
 
 rem ==============================================
 
@@ -59,7 +61,7 @@ IF DEFINED custom_log (
 	IF NOT "%~1"=="" (
 		SET file_log="%~2"
 		IF NOT EXIST "%~f2" (
-			echo le fichier log specifié n'existe pas
+			echo le fichier log "%~f2" specifié n'existe pas
 			goto help
 		)
 		SHIFT
@@ -73,10 +75,25 @@ IF /I "%~1"=="/e" set custom_excel=1
 IF DEFINED custom_excel (
 	IF NOT "%~1"=="" (
 		IF "%~2" == "" (
-			echo veuiller specifier un nom de fichier excel
+			echo veuillez specifier un nom de fichier excel
 			goto help
 		)
 		SET file_excel="%~2.csv"
+		SHIFT
+		SHIFT
+	) ELSE GOTO help
+)
+
+rem adresse perso du smartphone
+IF /I "%~1"=="-a" set custom_adress=1
+IF /I "%~1"=="/a" set custom_adress=1
+IF DEFINED custom_adress (
+	IF NOT "%~1"=="" (
+		IF "%~2" == "" (
+			echo veuillez specifier une adresse valide
+			goto help
+		)
+		SET device=%~2
 		SHIFT
 		SHIFT
 	) ELSE GOTO help
@@ -89,12 +106,6 @@ IF NOT "%~1"=="" (
 
 
 rem ===============================================================================
-
-rem si on utilise un fichier excel qui n'existe pas on le crée
-IF NOT EXIST "%file_excel%" (
-	echo Le fichier %file_excel% à été crée
-	echo DeviceVersion;Android;Type test (UP ou DOWN^);Temps (ms^);octet;n paquet;Debit (Ko/s^);interval_min;interval_max;Slave_latency;Timeout > %file_excel%
-)
 
 rem Si on utilise un log custom pas besoin de le recuperer sur le smartphone
 IF DEFINED custom_log goto run
@@ -115,12 +126,12 @@ if "%device%"=="" (
 	rem regarde si il y a un device connecté
 	for /f "delims=" %%a in ('call adb devices ^| findstr "device unauthorized emulator" ^| find /c /v "devices"') do (
 		if "%%a"=="0" (
-			echo Erreur: Aucun smarpthone connecte.
+			echo Erreur: Aucun smarpthone connecté.
 			goto exit
 		)
 		if not "%%a"=="1" (
-			echo Erreur: Plus de 1 smarpthone connecte au PC 
-			echo         Specifier le numero de serie du smartphone avec l'option d
+			echo Erreur: Plus de 1 smarpthone connecté au PC 
+			echo         Specifier le numéro de série du smartphone avec l'option d
 			call adb devices
 			goto exit
 		)
@@ -129,14 +140,20 @@ if "%device%"=="" (
 	rem regarde si le numero du smarpthone specifié est connecté
 	for /f "delims=" %%a in ('call adb devices ^| find /c "%device%"') do (
 		if "%%a"=="0" (
-			echo Erreur: Le smarpthone avec le numero "%device%" n est pas connecte.
+			echo Erreur: Le smarpthone avec le numero "%device%" n'est pas connecté.
 			call adb devices
 			goto exit
 		)
 	)
 )
-echo smartphone connecte : OK
+echo smartphone connecté : OK
 rem ==============================================================================
+
+rem si on utilise un fichier excel qui n'existe pas on le crée
+IF NOT EXIST "%file_excel%" (
+	echo Le fichier %file_excel% à été créé
+	echo DeviceVersion;Android;Type test (UP ou DOWN^);Temps (ms^);octet;n paquet;Debit (Ko/s^);interval_min;interval_max;Slave_latency;Timeout > %file_excel%
+)
 
 
 rem OBTENIR LE DERNIER LOG DU SMARTPHONE==========================================
@@ -146,9 +163,15 @@ FOR /f "delims=" %%a in (tmp) do (
 SET file_log=%%a
 )
 del tmp
-call adb pull "/sdcard/Nordic Semiconductor/%file_log%" log > nul 2>&1
+IF "%file_log%" == "" (
+	echo Aucun fichier log trouvé dans /sdcard/Nordic Semiconductor/
+	goto help
+)
+
+echo %file_log%
+call adb pull "/sdcard/Nordic Semiconductor/%file_log%" tmp
 echo copie de %file_log%
-SET file_log=log
+SET file_log=tmp
 rem Attente de 2 seconde
 ping 192.0.2.3 -n 1 -w 2000 > nul
 rem ==============================================================================
@@ -223,29 +246,34 @@ FOR /F delims^=^>^"^ tokens^=^1^,^2^,^3 %%A IN ('findstr /R "^A" "%file_log%"' )
 )
 
 IF !n_line! GTR 0 call :write_excel "!type_test!" "!time!" "!byte!" "!n_packet!" "!debit!" "!interval_min!" "!interval_max!" "!slave_latency!" "!timeout!"
+
+rem si on utilise pas un fichier perso de log on supprime le tempoarire
+IF NOT DEFINED custom_log del tmp
+
 goto exit
 rem =====================================================================================
 
 rem ECRITURE DONNEES DANS FICHIER EXCEL==================================================
 :write_excel
 SET add_line=%empty%;%empty%;%~1;%~2;%~3;%~4;%~5;%~6;%~7;%~8;%~9
-echo %add_line%>>%file_excel% && echo Ligne (%add_line%) ajoute dans (%file_excel%)
+echo %add_line%>>%file_excel% && echo Lignes (%add_line%) ajoutées dans (%file_excel%)
 goto eof
 rem =====================================================================================
 
 rem HELP=================================================================================
 :help
 echo AIDE :
-echo %~0 [/L fichier_log] [/E fichier_excel]
-echo    %~0 permet de convertir un fichier .log obtenu apres un test de benchmark vers un fichier excel
-echo    Sans option le script ira chercher le log le plus recent sur le smartphone connecte en USB
-echo    Le chemin par defaut du log est : /sdcard/Nordic Semiconductor/fichier_log
-echo    Le chemin par defaut du fichier excel est : %file_excel%
+echo %program% [/L fichier_log] [/E fichier_excel] [/A adresse_smartphone]
+echo    %program% permet de convertir un fichier .log obtenu après un test de benchmark vers un fichier excel
+echo    Sans option le script ira chercher le log le plus récent sur le smartphone connecté en USB
+echo    Le chemin par défaut du log est : /sdcard/Nordic Semiconductor/fichier_log
+echo    Le chemin par défaut du fichier excel est : %file_excel%
 echo    /L   Specifie un fichier log présent sur l'ordinateur
-echo         ex : %~0 /L custom_log
-echo    /E   Specifie un fichier .csv pour enregistrer les données extraite
-echo         Si le fichier .csv n'existe pas il sera crée avec les bonnes colonnes
-echo         ex : %~0 /E custom_transfert
+echo         ex : %program% /L custom_log
+echo    /E   Specifie un fichier .csv pour enregistrer les données extraites
+echo         Si le fichier .csv n'existe pas il sera créé avec les bonnes colonnes
+echo         ex : %program% /E custom_transfert
+echo    /A   Specifie un numéro de série de smarpthone sur lequel le fichier .log sera pris
 goto exit
 rem =====================================================================================
 

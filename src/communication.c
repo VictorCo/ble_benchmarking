@@ -297,6 +297,8 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                     m_info_t.timer_name = cmd->name;
                     m_info_t.b_timestamp_start = true;
                     m_info_t.byte_number = 0;
+                    m_info_t.n_packet = 0;
+                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_START_TIMER, strlen(RESULT_MSG_START_TIMER), false);
                     m_info_t.timestamp_start = timer_get_ticks();
                 }
                 
@@ -335,6 +337,7 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                         if(cmd->name == TEST_SPEED_UP)
                         {
                             m_info_t.byte_number += p_msg_t->length;
+                            m_info_t.n_packet++;
                             i++;
                         }
                     
@@ -369,7 +372,7 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                     }
                     
                     *(m_def_conn_param[conn_param].param_value) = modify_value;
-                    err_code = sd_ble_gap_conn_param_update(p_nus->conn_handle, &m_info_t.conn_params);
+                    err_code = sd_ble_gap_ppcp_set(&m_info_t.conn_params);
                     NRF_LOG_PRINTF("Modify : %s\n", m_def_conn_param[conn_param].param_name);
                     NRF_LOG_PRINTF("Value : %d\n", modify_value);
                     NRF_LOG_PRINTF("Value modifie : %d\n", *(m_def_conn_param[conn_param].param_value));
@@ -381,18 +384,26 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
             case GET_TIME :
                 if(m_info_t.b_timestamp_available)
                 {
-
+                    //Type de test : UP? DOWN?
                     if(m_info_t.timer_name == TEST_SPEED_UP)
-                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_UP, strlen(RESULT_MSG_GET_TIME_UP), false);
+                        sprintf(data_send, "%s>%d", RESULT_MSG_GET_TIME_UP, m_info_t.timestamp);
                     else if(m_info_t.timer_name == TEST_SPEED_DOWN)
-                        ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_DOWN, strlen(RESULT_MSG_GET_TIME_DOWN), false);
+                        sprintf(data_send, "%s>%d", RESULT_MSG_GET_TIME_DOWN, m_info_t.timestamp);
                     
-                    sprintf(data_send, "%d", m_info_t.timestamp);
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                     
-                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_BYTE, strlen(RESULT_MSG_GET_TIME_BYTE), false);
+                    //nombre octet
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_TIME_BYTE, m_info_t.byte_number);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                     
-                    sprintf(data_send, "%d", m_info_t.byte_number);
+                    //debit
+                    //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_TIME_DEBIT, strlen(RESULT_MSG_GET_TIME_DEBIT), false);
+                    sprintf(data_send, "%s>%f", RESULT_MSG_GET_TIME_DEBIT, (float)m_info_t.byte_number/(float)m_info_t.timestamp);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
+                    
+                    //nombre de packet
+                    //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_N_PACKET, strlen(RESULT_MSG_GET_N_PACKET), false);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_N_PACKET, m_info_t.n_packet);
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                 }
                 
@@ -403,11 +414,27 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
             case GET_PARAMS :
                 if(sd_ble_gap_ppcp_get(&m_info_t.conn_params) == NRF_SUCCESS)
                 {
-                    NRF_LOG_PRINTF("GET_PARAMS\n");
-                    NRF_LOG_PRINTF("Interval min : %d\n", m_info_t.conn_params.min_conn_interval);
-                    NRF_LOG_PRINTF("Interval max : %d\n", m_info_t.conn_params.max_conn_interval);
-                    NRF_LOG_PRINTF("Slave latency : %d\n", m_info_t.conn_params.slave_latency);
-                    NRF_LOG_PRINTF("Conn sup timeout : %d\n", m_info_t.conn_params.conn_sup_timeout);
+               
+                    //interval min
+                    //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_INTERVAL_MIN, strlen(RESULT_MSG_GET_CON_INTERVAL_MIN), false);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_INTERVAL_MIN, m_info_t.conn_params.min_conn_interval);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
+                    
+                    //interval max
+                    //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_INTERVAL_MAX, strlen(RESULT_MSG_GET_CON_INTERVAL_MAX), false);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_INTERVAL_MAX, m_info_t.conn_params.max_conn_interval);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
+                    
+                    //slave_latency
+                    //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_SLAVE_LATENCY, strlen(RESULT_MSG_GET_CON_SLAVE_LATENCY), false);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_SLAVE_LATENCY, m_info_t.conn_params.slave_latency);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
+                    
+                    //timeout
+                    //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_TIMEOUT, strlen(RESULT_MSG_GET_CON_TIMEOUT), false);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_TIMEOUT, m_info_t.conn_params.conn_sup_timeout);
+                    ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
+                    
                 }
                 break;
                 

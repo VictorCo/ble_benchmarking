@@ -25,10 +25,17 @@
 #define M_CON_SLAVE_LATENCY "slave_latency"
 #define M_CON_TIMEOUT       "timeout"
 
-#define RESULT_MSG_STOP_TIMER       "Stop timer"
-#define RESULT_MSG_GET_TIME_UP      "UP get time : "
-#define RESULT_MSG_GET_TIME_DOWN    "DOWN get time : "
-#define RESULT_MSG_GET_TIME_BYTE    "Octet : "
+#define RESULT_MSG_START_TIMER              "Start timer"
+#define RESULT_MSG_STOP_TIMER               "Stop timer"
+#define RESULT_MSG_GET_TIME_UP              "UP get time"
+#define RESULT_MSG_GET_TIME_DOWN            "DOWN get time"
+#define RESULT_MSG_GET_TIME_BYTE            "Octet"
+#define RESULT_MSG_GET_TIME_DEBIT           "Debit"
+#define RESULT_MSG_GET_N_PACKET             "N packet"
+#define RESULT_MSG_GET_CON_INTERVAL_MIN     "Interval min"
+#define RESULT_MSG_GET_CON_INTERVAL_MAX     "Interval max"
+#define RESULT_MSG_GET_CON_SLAVE_LATENCY    "Slave latency"
+#define RESULT_MSG_GET_CON_TIMEOUT          "Timeout"
 
 
 // Les commandes disponible
@@ -93,6 +100,7 @@ typedef struct
     uint32_t timestamp;           //valeur du timestamp entre start et stop
     uint8_t timer_name;           //TEST_SPEED_UP ou TEST_SPEED_DOWN
     uint16_t byte_number;         //nombre d'octet echangé dans une instance de test complete
+    uint16_t n_packet;            //nombre de packet necessaire pour l'echange 
     uint16_t remaining_byte;      //nombre d'octets restant a envoyer en DOWN dans le cas BLE_ERROR_NO_TX_PACKETS
     uint16_t total_byte;          //nombre total d'octet à transferer (utilisé dans le test_down)
     bool b_timestamp_start;       //savoir si un timer est deja lance
