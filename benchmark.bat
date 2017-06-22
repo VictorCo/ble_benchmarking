@@ -168,8 +168,7 @@ IF "%file_log%" == "" (
 	goto help
 )
 
-echo %file_log%
-call adb pull "/sdcard/Nordic Semiconductor/%file_log%" tmp
+call adb pull "/sdcard/Nordic Semiconductor/%file_log%" tmp > nul 2>&1
 echo copie de %file_log%
 SET file_log=tmp
 rem Attente de 2 secondes
