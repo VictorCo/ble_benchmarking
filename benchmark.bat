@@ -37,7 +37,13 @@ SET file_excel=temps_transfert.csv
 
 SET n_line=0
 
-SET program=%~0 
+SET program=%~n0
+
+rem VARIABLE DEFINI PLUS TARD=====================
+rem on utilse un log perso ?
+rem custom_log
+rem on utilise un excel perso ?
+rem custom_excel
 
 rem ==============================================
 
@@ -140,7 +146,7 @@ if "%device%"=="" (
 	rem regarde si le numero du smarpthone specifié est connecté
 	for /f "delims=" %%a in ('call adb devices ^| find /c "%device%"') do (
 		if "%%a"=="0" (
-			echo Erreur: Le smarpthone avec le numero "%device%" n'est pas connecté.
+			echo Erreur: Le smarpthone avec le numéro de serie "%device%" n'est pas connecté.
 			call adb devices
 			goto exit
 		)
@@ -148,12 +154,6 @@ if "%device%"=="" (
 )
 echo smartphone connecté : OK
 rem ==============================================================================
-
-rem si on utilise un fichier excel qui n'existe pas on le crée
-IF NOT EXIST "%file_excel%" (
-	echo Le fichier %file_excel% à été créé
-	echo DeviceVersion;Android;Type test (UP ou DOWN^);Temps (ms^);octet;n paquet;Debit (Ko/s^);interval_min;interval_max;Slave_latency;Timeout > %file_excel%
-)
 
 
 rem OBTENIR LE DERNIER LOG DU SMARTPHONE==========================================
@@ -172,13 +172,20 @@ echo %file_log%
 call adb pull "/sdcard/Nordic Semiconductor/%file_log%" tmp
 echo copie de %file_log%
 SET file_log=tmp
-rem Attente de 2 seconde
+rem Attente de 2 secondes
 ping 192.0.2.3 -n 1 -w 2000 > nul
 rem ==============================================================================
 
 
-rem BOUCLE PRINCIPAL POUR EXTRAINE DONNEES===============================================
+rem BOUCLE PRINCIPAL POUR EXTRAINE LES DONNEES===============================================
 :run
+rem si on utilise un fichier excel qui n'existe pas on le crée
+IF NOT EXIST "%file_excel%" (
+	echo Le fichier %file_excel% à été créé
+	echo DeviceVersion;Android;Type test (UP ou DOWN^);Temps (ms^);octet;n paquet;Debit (Ko/s^);interval_min;interval_max;Slave_latency;Timeout > %file_excel%
+)
+
+
 echo Traitement en cours...
 FOR /F delims^=^>^"^ tokens^=^1^,^2^,^3 %%A IN ('findstr /R "^A" "%file_log%"' ) DO (
 	rem Stop timer
@@ -245,9 +252,12 @@ FOR /F delims^=^>^"^ tokens^=^1^,^2^,^3 %%A IN ('findstr /R "^A" "%file_log%"' )
 
 )
 
-IF !n_line! GTR 0 call :write_excel "!type_test!" "!time!" "!byte!" "!n_packet!" "!debit!" "!interval_min!" "!interval_max!" "!slave_latency!" "!timeout!"
+IF !n_line! GTR 0 (
+	call :write_excel "!type_test!" "!time!" "!byte!" "!n_packet!" "!debit!" "!interval_min!" "!interval_max!" "!slave_latency!" "!timeout!"
+	echo !n_line! lignes ajoutée(s^)
+)
 
-rem si on utilise pas un fichier perso de log on supprime le tempoarire
+rem si on utilise pas un fichier perso de log on supprime le temporaire
 IF NOT DEFINED custom_log del tmp
 
 goto exit
@@ -268,12 +278,12 @@ echo    %program% permet de convertir un fichier .log obtenu après un test de b
 echo    Sans option le script ira chercher le log le plus récent sur le smartphone connecté en USB
 echo    Le chemin par défaut du log est : /sdcard/Nordic Semiconductor/fichier_log
 echo    Le chemin par défaut du fichier excel est : %file_excel%
-echo    /L   Specifie un fichier log présent sur l'ordinateur
-echo         ex : %program% /L custom_log
-echo    /E   Specifie un fichier .csv pour enregistrer les données extraites
+echo    /L   Spécifie un fichier log présent sur l'ordinateur
+echo         ex : benchmark.bat /L custom_log
+echo    /E   Spécifie un fichier .csv pour enregistrer les données extraites
 echo         Si le fichier .csv n'existe pas il sera créé avec les bonnes colonnes
-echo         ex : %program% /E custom_transfert
-echo    /A   Specifie un numéro de série de smarpthone sur lequel le fichier .log sera pris
+echo         ex : benchmark.bat /E custom_transfert
+echo    /A   Spécifie un numéro de série de smarpthone sur lequel le fichier .log sera pris
 goto exit
 rem =====================================================================================
 

@@ -1,2 +1,1 @@
-DeviceVersion;Android;Octets;n paquet;interval_min;interval_max;Slave_latency;Timeout;Temps UP (ms);Temps DOWN (ms);Debit UP;Debit DOWN
-Samsung Galaxy SIII;;;;;;;;;;;
+DeviceVersion;Android;Type test (UP ou DOWN);Temps (ms);octet;n paquet;Debit (Ko/s);interval_min;interval_max;Slave_latency;Timeout 
