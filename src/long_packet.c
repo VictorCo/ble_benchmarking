@@ -42,11 +42,12 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
             
             
         case BLE_EVT_TX_COMPLETE :
-            p_ble_nus->available_channel++;
+//            p_ble_nus->available_channel++;
         
-            if(p_ble_nus->available_channel == p_ble_nus->max_channel)
-                continue_send_byte_up(p_ble_nus);
-            
+//            if(p_ble_nus->available_channel == p_ble_nus->max_channel)
+//            if(p_ble_nus->available_channel)
+            continue_send_byte_up(p_ble_nus);
+
             break;
             
         default :

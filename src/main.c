@@ -46,6 +46,7 @@
 #include "timer_packet.h"
 #include "security_mode.h"
 #include "def.h"
+#include "nrf_delay.h"
 
 #define IS_SRVC_CHANGED_CHARACT_PRESENT 0                                           /**< Include the service_changed characteristic. If not enabled, the server's database cannot be changed for the lifetime of the device. */
 
@@ -137,8 +138,11 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 //        while(app_uart_put(p_data[i]) != NRF_SUCCESS);
 //    }
 //    while(app_uart_put('\n') != NRF_SUCCESS);
-		
+    uint32_t time_start;
+    time_start = timer_get_ticks();
+    
 	communication_start((char *)p_data, length, p_nus);
+    NRF_LOG_PRINTF("==TIME== %d\n", timer_ticks_to_ms(timer_get_ticks() - time_start) );
 }
 /**@snippet [Handling the data received over BLE] */
 
@@ -178,6 +182,12 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
     {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
         APP_ERROR_CHECK(err_code);
+    }
+    
+    else if(p_evt->evt_type == BLE_CONN_PARAMS_EVT_SUCCEEDED)
+    {
+        NRF_LOG_PRINTF("Update succesful!!\n");
+        ble_nus_string_send(&m_nus, (uint8_t *)"update", 6, false);
     }
 }
 
@@ -274,7 +284,7 @@ static void on_ble_evt(ble_evt_t * p_ble_evt)
             APP_ERROR_CHECK(err_code);
             m_conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
             sd_ble_tx_packet_count_get(m_conn_handle, &m_nus.max_channel);
-            m_nus.available_channel = m_nus.max_channel;
+            m_nus.available_channel = m_nus.max_channel + 1;
             break;
             
         case BLE_GAP_EVT_DISCONNECTED:
@@ -319,7 +329,7 @@ static void ble_evt_dispatch(ble_evt_t * p_ble_evt)
     bsp_btn_ble_on_ble_evt(p_ble_evt);
 	long_packet_on_ble_event(&m_nus, p_ble_evt);
 //    security_mode_on_ble_event(&m_nus, p_ble_evt);
-    communication_update_params(p_ble_evt);
+//    communication_update_params(p_ble_evt);
 //    dm_ble_evt_handler(p_ble_evt);
 }
 
@@ -601,7 +611,7 @@ static void power_manage(void)
 int main(void)
 {
 //	test time
-//    uint32_t v_timer;
+    uint32_t time_start;
     
     //test pointeur
 //    uint8_t tab8[] = {1,2,3,4};
@@ -645,12 +655,18 @@ int main(void)
     {
 //        v_timer = timer_ticks_to_ms(timer_get_ticks());
 //        if (v_timer > 10000)
-//        {
-//            timer_restart();
+//            timer_stop();
 //        }
 //        NRF_LOG_PRINTF("Timer %d\n", v_timer);
+//        
+//        err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
         
-        err_code = sd_ble_gatts_value_get(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);
+        
+//        time_start = timer_get_ticks();
+//        nrf_delay_ms(10000);
+//        NRF_LOG_PRINTF("temps %d\n", timer_ticks_to_ms(timer_get_ticks() - time_start) );
+        
+        
         power_manage();
     }
 }

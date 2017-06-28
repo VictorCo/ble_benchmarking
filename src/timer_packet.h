@@ -1,6 +1,6 @@
 #include "app_timer.h"
 
-#define APP_TIMER_PRESCALER             0                                           /**< Value of the RTC1 PRESCALER register. */
+#define APP_TIMER_PRESCALER             7                                           /**< Value of the RTC1 PRESCALER register. */
 #define APP_TIMER_OP_QUEUE_SIZE         4                                           /**< Size of timer operation queues. */
 #define APP_TIMER_MAX_TIMERS            0
 

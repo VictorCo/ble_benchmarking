@@ -50,7 +50,7 @@ uint32_t timer_get_ticks(void)
 
 uint32_t timer_ticks_to_ms(uint32_t ticks)
 {
-    return ticks/(APP_TIMER_CLOCK_FREQ/1000);
+    return ticks * ( (APP_TIMER_PRESCALER  + 1) * 1000 ) / APP_TIMER_CLOCK_FREQ;
 }
 
 

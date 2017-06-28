@@ -19,12 +19,15 @@
 
 #define N_NAME          0x2         //nombre de nom different possible pour un input
 
-#define N_CON_PARAM 4       //nombre de parametre de connexion           
+#define N_CON_PARAM 4       //nombre de parametre de connexion   
+
+//Nom des 4 paramètres de connexion
 #define M_CON_INTERVAL_MIN  "interval_min"
 #define M_CON_INTERVAL_MAX  "interval_max"
 #define M_CON_SLAVE_LATENCY "slave_latency"
 #define M_CON_TIMEOUT       "timeout"
 
+//les messages qui sont envoyé pour identifier les valeurs correspondantes
 #define RESULT_MSG_START_TIMER              "Start timer"
 #define RESULT_MSG_STOP_TIMER               "Stop timer"
 #define RESULT_MSG_GET_TIME_UP              "UP get time"
@@ -50,7 +53,7 @@ enum TYPE_CMD_NAME
     N_TYPE_CMD
 };
 
-//Les parametres disponible
+//Les paramètres disponible
 enum TYPE_PARAM_NAME
 {
     START = N_TYPE_CMD,
@@ -60,7 +63,6 @@ enum TYPE_PARAM_NAME
     N_TYPE_PARAM,
     N_INPUT = N_TYPE_PARAM
 };
-
 
 typedef struct
 {
@@ -74,6 +76,7 @@ typedef struct
 {
     char *param_name;
     uint16_t *param_value;
+    uint16_t *param_value_current;
 }c_def_conn_param;
 
 
@@ -109,6 +112,7 @@ typedef struct
     bool b_stop_down;             //on stop le timer down avant de recevoir toutes les données ?
     
     ble_gap_conn_params_t conn_params;
+    ble_gap_conn_params_t current_conn_params;
 }c_info_t;
 
 

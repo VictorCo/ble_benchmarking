@@ -41,15 +41,22 @@ c_info_t m_info_t =
                 .max_conn_interval = MAX_CONN_INTERVAL,
                 .slave_latency = SLAVE_LATENCY,
                 .conn_sup_timeout = CONN_SUP_TIMEOUT
+            },
+        .current_conn_params =
+            {
+                .min_conn_interval = MIN_CONN_INTERVAL,
+                .max_conn_interval = MAX_CONN_INTERVAL,
+                .slave_latency = SLAVE_LATENCY,
+                .conn_sup_timeout = CONN_SUP_TIMEOUT
             }
     };
     
 const c_def_conn_param m_def_conn_param[N_CON_PARAM] =
     {
-        {M_CON_INTERVAL_MIN,    (uint16_t *)&m_info_t.conn_params.min_conn_interval},
-        {M_CON_INTERVAL_MAX,    (uint16_t *)&m_info_t.conn_params.max_conn_interval},
-        {M_CON_SLAVE_LATENCY,   (uint16_t *)&m_info_t.conn_params.slave_latency},
-        {M_CON_TIMEOUT,         (uint16_t *)&m_info_t.conn_params.conn_sup_timeout}
+        {M_CON_INTERVAL_MIN,    (uint16_t *)&m_info_t.conn_params.min_conn_interval,        (uint16_t *)&m_info_t.current_conn_params.min_conn_interval},
+        {M_CON_INTERVAL_MAX,    (uint16_t *)&m_info_t.conn_params.max_conn_interval,        (uint16_t *)&m_info_t.current_conn_params.max_conn_interval},
+        {M_CON_SLAVE_LATENCY,   (uint16_t *)&m_info_t.conn_params.slave_latency,            (uint16_t *)&m_info_t.current_conn_params.slave_latency},       
+        {M_CON_TIMEOUT,         (uint16_t *)&m_info_t.conn_params.conn_sup_timeout,         (uint16_t *)&m_info_t.current_conn_params.conn_sup_timeout}
     };
 
 
@@ -86,6 +93,7 @@ void communication_start(char *s, int length, ble_nus_t *p_nus)
     {
         communication_error_display(err_code);
     }
+    
 }
 
 uint8_t parse(c_msg_t *p_msg)
@@ -206,6 +214,7 @@ bool check_input_word_exist(c_msg_t *p_msg_t)
             NRF_LOG_PRINTF("commande ou param requis\n");
             return false;
         }
+        
         for(j = 0, find = false; j < N_INPUT; j++)
         {
             for(k = 0; k < N_NAME; k++)
@@ -316,18 +325,25 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                         NRF_LOG_PRINTF("Il reste des bits a UP\nStop mis en attente\n");
                         return;
                     }
+                    
+                    if ( ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_STOP_TIMER, strlen(RESULT_MSG_STOP_TIMER), false) != NRF_SUCCESS)
+                    {
+                        return;
+                    }
+                    
                     m_info_t.b_stop_down = false;
                     m_info_t.b_timestamp_start = false;
                     m_info_t.b_timestamp_available = true;
-
-                    ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_STOP_TIMER, strlen(RESULT_MSG_STOP_TIMER), false);
                     
-                    m_info_t.timestamp = timer_ticks_to_ms( timer_get_ticks() - m_info_t.timestamp_start);                    
+                    m_info_t.timestamp = timer_ticks_to_ms( timer_get_ticks() - m_info_t.timestamp_start); 
+
+                    //DEBUG===
                     if(m_info_t.timer_name == TEST_SPEED_UP)
                         NRF_LOG_PRINTF("(UP) temps ecoule : %d\n", m_info_t.timestamp );
                     
                     else if(m_info_t.timer_name == TEST_SPEED_DOWN)
                         NRF_LOG_PRINTF("(DOWN) temps ecoule : %d\n", m_info_t.timestamp );
+                    //========
                 }
                 
                 else if(param->name == CONTINUE)
@@ -371,12 +387,25 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                         return;
                     }
                     
-                    *(m_def_conn_param[conn_param].param_value) = modify_value;
-                    err_code = sd_ble_gap_ppcp_set(&m_info_t.conn_params);
-                    NRF_LOG_PRINTF("Modify : %s\n", m_def_conn_param[conn_param].param_name);
+                   *(m_def_conn_param[conn_param].param_value) = MSEC_TO_UNITS(modify_value, UNIT_1_25_MS);
+                    //err_code = sd_ble_gap_ppcp_set(&m_info_t.conn_params);
+                    
+                    //===============================
+                    ble_gap_conn_params_t test; 
+                    sd_ble_gap_ppcp_get(&test);
+                    NRF_LOG_PRINTF("DEBUG test imin : %d\n", test.min_conn_interval);
+                    NRF_LOG_PRINTF("DEBUG test imax : %d\n", test.max_conn_interval);
+                    NRF_LOG_PRINTF("DEBUG test slave: %d\n", test.slave_latency);
+                    NRF_LOG_PRINTF("DEBUG test timeout: %d\n", test.conn_sup_timeout);
+                    //===============================
+                    if (sd_ble_gap_conn_param_update(p_nus->conn_handle,&m_info_t.conn_params) == NRF_SUCCESS )
+                    {
+                        *(m_def_conn_param[conn_param].param_value_current) = *(m_def_conn_param[conn_param].param_value);
+                    }
+                    NRF_LOG_PRINTF("==== Modify : %s\n", m_def_conn_param[conn_param].param_name);
                     NRF_LOG_PRINTF("Value : %d\n", modify_value);
                     NRF_LOG_PRINTF("Value modifie : %d\n", *(m_def_conn_param[conn_param].param_value));
-                    NRF_LOG_PRINTF("err_code : %d\n", err_code);
+                    NRF_LOG_PRINTF("err_code : %d ====\n", err_code);
                     
                 }
                 break;
@@ -411,30 +440,28 @@ void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus)
                    NRF_LOG_PRINTF("timer non dispo\n"); 
                 break;
                 
-            case GET_PARAMS :
-                if(sd_ble_gap_ppcp_get(&m_info_t.conn_params) == NRF_SUCCESS)
+            case GET_PARAMS :  
+                if(sd_ble_gap_ppcp_get(&m_info_t.conn_params) == NRF_SUCCESS )
                 {
-               
                     //interval min
                     //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_INTERVAL_MIN, strlen(RESULT_MSG_GET_CON_INTERVAL_MIN), false);
-                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_INTERVAL_MIN, m_info_t.conn_params.min_conn_interval);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_INTERVAL_MIN, m_info_t.current_conn_params.min_conn_interval);
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                     
                     //interval max
                     //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_INTERVAL_MAX, strlen(RESULT_MSG_GET_CON_INTERVAL_MAX), false);
-                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_INTERVAL_MAX, m_info_t.conn_params.max_conn_interval);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_INTERVAL_MAX, m_info_t.current_conn_params.max_conn_interval);
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                     
                     //slave_latency
                     //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_SLAVE_LATENCY, strlen(RESULT_MSG_GET_CON_SLAVE_LATENCY), false);
-                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_SLAVE_LATENCY, m_info_t.conn_params.slave_latency);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_SLAVE_LATENCY, m_info_t.current_conn_params.slave_latency);
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
                     
                     //timeout
                     //ble_nus_string_send(p_nus, (uint8_t *)RESULT_MSG_GET_CON_TIMEOUT, strlen(RESULT_MSG_GET_CON_TIMEOUT), false);
-                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_TIMEOUT, m_info_t.conn_params.conn_sup_timeout);
+                    sprintf(data_send, "%s>%d", RESULT_MSG_GET_CON_TIMEOUT, m_info_t.current_conn_params.conn_sup_timeout);
                     ble_nus_string_send(p_nus, (uint8_t *)data_send, strlen(data_send), false);
-                    
                 }
                 break;
                 
@@ -476,12 +503,13 @@ void continue_send_byte_up(ble_nus_t *p_nus)
             {
                 send_dummy_data(p_nus, &m_info_t, m_info_t.remaining_byte);
             }
+        }
+        
+        if(m_info_t.b_stop_down)   //si on a recu la commande de stopper le timer alors qu'on avait pas toute les données
+        {
+            //on renvoie une instruction comme quoi on veux stop le timer
             
-            else if(m_info_t.b_stop_down)   //si on a recu la commande de stopper le timer alors qu'on avait pas toute les données
-            {
-                //on renvoie une instruction comme quoi on veux stop le timer
-                communication_start("s tsd -e e", 10, p_nus);
-            }
+            communication_start("s tsd -e e", 10, p_nus);
         }
     }
 }
@@ -492,6 +520,8 @@ void communication_update_params(ble_evt_t *p_evt)
     {
         case BLE_GAP_EVT_CONN_PARAM_UPDATE :
             //m_info_t.conn_params = p_evt->evt.gap_evt.params.conn_param_update.conn_params;
+//        sd_ble_gap_conn_param_update(p_evt->evt.gap_evt.conn_handle, &p_evt->evt.gap_evt.params.conn_param_update_request.conn_params);
+        NRF_LOG_PRINTF("UPDATE\n");
             break;
         
         
