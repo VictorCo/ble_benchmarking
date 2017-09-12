@@ -35,6 +35,9 @@ SET trouve=0
 SET file_log=
 SET file_excel=temps_transfert.csv
 
+SET android_version=_
+SET phone_name=_
+
 SET n_line=0
 
 SET program=%~n0
@@ -152,6 +155,22 @@ if "%device%"=="" (
 		)
 	)
 )
+
+rem Obtenir le nom du smartphone
+adb shell getprop ro.product.model >> tmp
+FOR /f "delims=" %%a in (tmp) do (
+SET phone_name=%%a
+)
+del tmp
+
+rem Obtenir la version d'android
+adb shell getprop ro.build.version.release >> tmp
+FOR /f "delims=" %%a in (tmp) do (
+SET android_version=%%a
+)
+del tmp
+
+
 echo smartphone connecté : OK
 rem ==============================================================================
 
@@ -186,7 +205,7 @@ IF NOT EXIST "%file_excel%" (
 
 
 echo Traitement en cours...
-FOR /F delims^=^>^"^ tokens^=^1^,^2^,^3 %%A IN ('findstr /R "^A" "%file_log%"' ) DO (
+FOR /F delims^=^>^"^ tokens^=^1^,^2^,^3 %%A IN ('findstr /R "^A" %file_log%' ) DO (
 	rem Stop timer
 	echo %%B | find "%msg_stop%" > nul 2>&1
 	if !errorlevel! == 0 (
@@ -264,7 +283,7 @@ rem ============================================================================
 
 rem ECRITURE DONNEES DANS FICHIER EXCEL==================================================
 :write_excel
-SET add_line=%empty%;%empty%;%~1;%~2;%~3;%~4;%~5;%~6;%~7;%~8;%~9
+SET add_line=%phone_name%;%android_version%;%~1;%~2;%~3;%~4;%~5;%~6;%~7;%~8;%~9
 echo %add_line%>>%file_excel% && echo Lignes (%add_line%) ajoutées dans (%file_excel%)
 goto eof
 rem =====================================================================================

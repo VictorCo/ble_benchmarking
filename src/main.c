@@ -138,11 +138,7 @@ static void nus_data_handler(ble_nus_t * p_nus, uint8_t * p_data, uint16_t lengt
 //        while(app_uart_put(p_data[i]) != NRF_SUCCESS);
 //    }
 //    while(app_uart_put('\n') != NRF_SUCCESS);
-    uint32_t time_start;
-    time_start = timer_get_ticks();
-    
 	communication_start((char *)p_data, length, p_nus);
-    NRF_LOG_PRINTF("==TIME== %d\n", timer_ticks_to_ms(timer_get_ticks() - time_start) );
 }
 /**@snippet [Handling the data received over BLE] */
 
@@ -177,7 +173,7 @@ static void services_init(void)
 static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
 {
     uint32_t err_code;
-    
+    NRF_LOG_PRINTF("event update\n");
     if(p_evt->evt_type == BLE_CONN_PARAMS_EVT_FAILED)
     {
         err_code = sd_ble_gap_disconnect(m_conn_handle, BLE_HCI_CONN_INTERVAL_UNACCEPTABLE);
@@ -186,7 +182,8 @@ static void on_conn_params_evt(ble_conn_params_evt_t * p_evt)
     
     else if(p_evt->evt_type == BLE_CONN_PARAMS_EVT_SUCCEEDED)
     {
-        NRF_LOG_PRINTF("Update succesful!!\n");
+        NRF_LOG_PRINTF("event update correct\n");
+        nrf_delay_ms(1000);
         ble_nus_string_send(&m_nus, (uint8_t *)"update", 6, false);
     }
 }
@@ -611,7 +608,7 @@ static void power_manage(void)
 int main(void)
 {
 //	test time
-    uint32_t time_start;
+//    uint32_t time_start;
     
     //test pointeur
 //    uint8_t tab8[] = {1,2,3,4};
@@ -644,8 +641,6 @@ int main(void)
     
     err_code = NRF_LOG_INIT(); 
     NRF_LOG("***************\nSTART\n***************\n");
-    NRF_LOG_PRINTF("uint8_t : %d\n", sizeof(uint8_t));
-    NRF_LOG_PRINTF("uint8_t* : %d\n", sizeof(uint8_t*));
     err_code = ble_advertising_start(BLE_ADV_MODE_FAST);
     APP_ERROR_CHECK(err_code);
     sd_ble_gatts_value_set(m_conn_handle, m_nus.rx_handles.cccd_handle, &value);

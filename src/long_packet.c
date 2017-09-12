@@ -49,6 +49,11 @@ void long_packet_on_ble_event(ble_nus_t *p_ble_nus, ble_evt_t * p_ble_evt)
             continue_send_byte_up(p_ble_nus);
 
             break;
+        
+        case BLE_GATTS_EVT_RW_AUTHORIZE_REQUEST :
+            NRF_LOG_PRINTF("Request\n");
+        
+            break;
             
         default :
                 

@@ -8,5 +8,7 @@
 #define MESSAGE_ERROR_LEN_WORD              5
 #define MESSAGE_ERROR_NO_CMD                6
 
+#define DUMMY_DATA                          7
+
 void communication_error_display(uint8_t err_code);
 

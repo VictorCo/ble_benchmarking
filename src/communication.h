@@ -41,6 +41,8 @@
 #define RESULT_MSG_GET_CON_TIMEOUT          "Timeout"
 
 
+#define DELAY_NOTIF_STOP 1000
+
 // Les commandes disponible
 enum TYPE_CMD_NAME
 {
@@ -124,7 +126,7 @@ bool check_input_word_exist(c_msg_t *p_msg_t);
 bool check_argument_number(const c_word_t *p_param, uint8_t nb_argument); //regarde si un parametre passe contient dans le message transmis le bon nombre d'arguments
 void communication_run(const c_msg_t *p_msg_t, ble_nus_t *p_nus);
 void continue_send_byte_up(ble_nus_t *p_nus);
-void communication_update_params(ble_evt_t *p_evt);
+//void communication_update_params(ble_evt_t *p_evt);
 int8_t get_conn_param(char *s);
 
 #endif
